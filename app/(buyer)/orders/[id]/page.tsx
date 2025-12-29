@@ -24,7 +24,7 @@ import { fadeInUp, staggerContainer } from "@/lib/animations";
 const mockOrder = {
     id: "1",
     orderNumber: "DBL-ABC123-XYZ",
-    status: "delivering" as const,
+    status: "delivering" as keyof typeof statusConfig,
     createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     items: [
         { name: "Dell Inspiron 15 Laptop", qty: 1, price: 165000, image: null },
