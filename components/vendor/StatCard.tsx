@@ -108,7 +108,7 @@ export function StatCard({
                         </span>
                     )}
                 </div>
-                <p className="text-3xl lg:text-4xl xl:text-5xl font-black">
+                <p className="text-2xl lg:text-3xl font-black tracking-tight" style={{ wordBreak: 'break-word' }}>
                     {formattedValue()}
                 </p>
             </CardContent>

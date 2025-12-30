@@ -1,43 +1,40 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import {
     DollarSign,
     ShoppingCart,
     Package,
-    Star,
     TrendingUp,
-    TrendingDown,
     ArrowUpRight,
     Plus,
     Eye,
     Clock,
     CheckCircle,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { cn, formatNaira } from "@/lib/utils";
+import { cn, formatNaira, formatRelativeTime } from "@/lib/utils";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 import { StatCard } from "@/components/vendor/StatCard";
-
-// Mock data
-const stats = [
-    { label: "Revenue", value: 485000, change: 12.5, format: "currency", trend: "up" },
-    { label: "Orders", value: 28, change: -5.3, format: "number", trend: "down" },
-    { label: "Products", value: 45, change: 8.2, format: "number", trend: "up" },
-    { label: "Rating", value: 4.8, change: 0.2, format: "rating", trend: "up" },
-];
-
-
-
 import { useMarketplaceStore } from "@/stores/useMarketplaceStore";
-import { formatRelativeTime } from "@/lib/utils";
 
 export default function VendorDashboardPage() {
+    const [isMounted, setIsMounted] = useState(false);
+
+    // Access store data
+    const user = useMarketplaceStore((state) => state.user);
+    const vendors = useMarketplaceStore((state) => state.vendors);
     const orders = useMarketplaceStore((state) => state.orders);
     const products = useMarketplaceStore((state) => state.products);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
+    // Derived Data
+    const currentVendor = vendors.find(v => v.userId === user?.id) || vendors[0];
 
     // Calculate Stats
     const totalRevenue = orders.reduce((acc, order) => acc + order.total, 0);
@@ -45,7 +42,7 @@ export default function VendorDashboardPage() {
     const productCount = products.length;
 
     // Mock rating for now as we don't have reviews store yet
-    const averageRating = 4.8;
+    const averageRating = currentVendor?.rating || 4.8;
 
     // Calculate Top Products dynamically
     const productSales = orders.flatMap(o => o.items).reduce((acc, item) => {
@@ -78,8 +75,19 @@ export default function VendorDashboardPage() {
         customer: order.buyerName,
         amount: order.total,
         status: order.status,
-        time: formatRelativeTime(order.createdAt)
+        time: isMounted ? formatRelativeTime(order.createdAt) : "Loading..."
     }));
+
+    if (!isMounted) {
+        return (
+            <div className="flex-1 p-12 flex items-center justify-center">
+                <div className="animate-pulse flex flex-col items-center gap-4">
+                    <div className="h-8 w-8 bg-muted rounded-full"></div>
+                    <div className="h-4 w-32 bg-muted rounded"></div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex-1 overflow-y-auto scrollbar-thin">
@@ -97,14 +105,16 @@ export default function VendorDashboardPage() {
                             Welcome back,
                             <br />
                             <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-                                TechHub NG
+                                {currentVendor.businessName}
                             </span>
                         </h1>
                     </div>
-                    <Button size="lg" className="rounded-full bg-foreground text-background hover:bg-foreground/90 lg:px-8">
-                        <Plus className="w-5 h-5 mr-2" />
-                        Add Product
-                    </Button>
+                    <Link href="/vendor/products/new">
+                        <Button size="lg" className="rounded-full bg-foreground text-background hover:bg-foreground/90 lg:px-8">
+                            <Plus className="w-5 h-5 mr-2" />
+                            Add Product
+                        </Button>
+                    </Link>
                 </motion.div>
 
                 {/* Stats - Large Cards */}
@@ -129,10 +139,12 @@ export default function VendorDashboardPage() {
 
                 {/* Quick Actions */}
                 <motion.div variants={fadeInUp} className="flex gap-3 overflow-x-auto scrollbar-hide -mx-6 px-6 lg:mx-0 lg:px-0">
-                    <Button variant="outline" className="flex-shrink-0 rounded-full px-6 border-foreground/20 hover:bg-foreground/5">
-                        <Eye className="w-4 h-4 mr-2" />
-                        View Store
-                    </Button>
+                    <Link href={`/store/${currentVendor.id}`}>
+                        <Button variant="outline" className="flex-shrink-0 rounded-full px-6 border-foreground/20 hover:bg-foreground/5">
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Store
+                        </Button>
+                    </Link>
                     <Link href="/vendor/analytics">
                         <Button variant="outline" className="flex-shrink-0 rounded-full px-6 border-foreground/20 hover:bg-foreground/5">
                             <TrendingUp className="w-4 h-4 mr-2" />
@@ -166,7 +178,7 @@ export default function VendorDashboardPage() {
                             ) : recentOrdersList.map((order) => (
                                 <Link
                                     key={order.id}
-                                    href={`/vendor/orders/${order.id}`}
+                                    href={`/vendor/orders/${order.id}`} // Technically using order number as ID in mocks sometimes, but let's assume route uses ID
                                     className="flex items-center justify-between p-4 lg:p-5 hover:bg-foreground/5 transition-colors first:rounded-t-2xl last:rounded-b-2xl"
                                 >
                                     <div className="flex items-center gap-4">
@@ -206,7 +218,11 @@ export default function VendorDashboardPage() {
                             </Link>
                         </div>
                         <div className="space-y-3">
-                            {topProducts.map((product, index) => (
+                            {topProducts.length === 0 ? (
+                                <div className="p-8 text-center border border-foreground/10 rounded-xl text-muted-foreground">
+                                    No sales yet
+                                </div>
+                            ) : topProducts.map((product, index) => (
                                 <div
                                     key={product.id}
                                     className="flex items-center gap-4 lg:gap-6 p-4 lg:p-5 border border-foreground/10 rounded-xl hover:border-foreground/30 transition-colors"
