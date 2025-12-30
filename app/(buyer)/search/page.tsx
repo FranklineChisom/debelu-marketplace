@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
     Search,
     X,
@@ -10,24 +10,30 @@ import {
     Clock,
     TrendingUp,
     Sparkles,
+    Mic,
+    Filter,
+    LayoutGrid,
+    List,
+    ShoppingBag
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { cn, formatNaira } from "@/lib/utils";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 import { PRODUCT_CATEGORIES, CHAT_SUGGESTIONS } from "@/lib/constants";
 
 // Mock recent searches
-const recentSearches = ["laptop", "airpods", "textbooks", "snacks"];
+const recentSearches = ["MacBook Pro", "Anime Hoodie", "Calculus Textbook", "Gaming Mouse"];
 
 // Mock trending products
 const trendingProducts = [
-    { id: "1", name: "Dell Inspiron 15 Laptop", price: 165000, category: "Electronics" },
-    { id: "2", name: "iPhone 12 Case Bundle", price: 9000, category: "Accessories" },
-    { id: "3", name: "USB-C Hub 7-in-1", price: 12500, category: "Electronics" },
+    { id: "1", name: "Dell Inspiron 15 Laptop", price: 165000, category: "Electronics", image: null },
+    { id: "2", name: "iPhone 12 Case Bundle", price: 9000, category: "Accessories", image: null },
+    { id: "3", name: "USB-C Hub 7-in-1", price: 12500, category: "Electronics", image: null },
 ];
 
 // Mock search results
@@ -41,6 +47,7 @@ const mockSearchResults = [
         vendorName: "TechHub NG",
         rating: 4.8,
         reviewCount: 24,
+        category: "Electronics"
     },
     {
         id: "2",
@@ -50,6 +57,7 @@ const mockSearchResults = [
         vendorName: "CompStation",
         rating: 4.5,
         reviewCount: 12,
+        category: "Electronics"
     },
     {
         id: "3",
@@ -59,28 +67,49 @@ const mockSearchResults = [
         vendorName: "TechHub NG",
         rating: 4.6,
         reviewCount: 18,
+        category: "Electronics"
+    },
+    {
+        id: "4",
+        name: "Logitech MX Master 3S",
+        price: 85000,
+        image: null,
+        vendorName: "GadgetWorld",
+        rating: 4.9,
+        reviewCount: 156,
+        category: "Accessories"
     },
 ];
 
+const filters = ["All", "Electronics", "Fashion", "Books", "Food", "Services"];
+
 export default function SearchPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const initialQuery = searchParams.get("q") || "";
+
     const inputRef = useRef<HTMLInputElement>(null);
-    const [query, setQuery] = useState("");
+    const [query, setQuery] = useState(initialQuery);
     const [isSearching, setIsSearching] = useState(false);
     const [results, setResults] = useState<typeof mockSearchResults>([]);
+    const [activeFilter, setActiveFilter] = useState("All");
+    const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+    const [isListening, setIsListening] = useState(false);
 
     useEffect(() => {
-        inputRef.current?.focus();
-    }, []);
+        if (!initialQuery) {
+            inputRef.current?.focus();
+        }
+    }, [initialQuery]);
 
     useEffect(() => {
         if (query.length > 2) {
             setIsSearching(true);
             // Simulate search delay
             const timer = setTimeout(() => {
-                setResults(mockSearchResults);
+                setResults(mockSearchResults); // In real app, filter based on query
                 setIsSearching(false);
-            }, 300);
+            }, 600);
             return () => clearTimeout(timer);
         } else {
             setResults([]);
@@ -96,229 +125,278 @@ export default function SearchPage() {
         inputRef.current?.focus();
     };
 
+    const startVoiceSearch = () => {
+        setIsListening(true);
+        setTimeout(() => setIsListening(false), 2000); // Simulate listening
+    };
+
     return (
-        <div className="min-h-screen bg-background pb-20">
-            {/* Search Header */}
-            <header className="sticky top-0 z-50 bg-background border-b safe-top">
-                <div className="flex items-center gap-3 p-4">
-                    <button
-                        onClick={() => router.back()}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-muted transition-colors flex-shrink-0"
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                    </button>
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input
-                            ref={inputRef}
-                            placeholder="Search products, vendors..."
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            className="pl-10 pr-10"
-                        />
-                        {query && (
+        <div className="min-h-screen bg-background pb-20 flex flex-col">
+            {/* Premium Sticky Header */}
+            <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/40 safe-top">
+                <div className="p-4 space-y-4">
+                    {/* Search Bar Row */}
+                    <div className="flex items-center gap-3">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => router.back()}
+                            className="rounded-full hover:bg-muted/50 flex-shrink-0"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </Button>
+                        <div className="relative flex-1 group">
+                            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-blue-500/20 rounded-2xl blur-md opacity-0 group-focus-within:opacity-100 transition-opacity duration-500" />
+                            <div className="relative flex items-center bg-muted/50 border border-border/50 rounded-2xl overflow-hidden focus-within:ring-2 focus-within:ring-primary/20 focus-within:bg-background transition-all">
+                                <Search className="w-5 h-5 text-muted-foreground ml-3" />
+                                <Input
+                                    ref={inputRef}
+                                    placeholder="Search for anything..."
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                    className="border-0 bg-transparent focus-visible:ring-0 shadow-none h-12 text-base px-3"
+                                />
+                                {query ? (
+                                    <button
+                                        onClick={clearSearch}
+                                        className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={startVoiceSearch}
+                                        className={`p-2 transition-colors ${isListening ? 'text-primary animate-pulse' : 'text-muted-foreground hover:text-primary'}`}
+                                    >
+                                        <Mic className="w-5 h-5" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Filter Chips - Horizontal Scroll */}
+                    <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1 -mx-4 px-4 mask-fade-sides">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full border-dashed border-muted-foreground/30 flex-shrink-0"
+                        >
+                            <Filter className="w-3.5 h-3.5 mr-2" />
+                            Filters
+                        </Button>
+                        <Separator orientation="vertical" className="h-6" />
+                        {filters.map((filter) => (
                             <button
-                                onClick={clearSearch}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                key={filter}
+                                onClick={() => setActiveFilter(filter)}
+                                className={cn(
+                                    "px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0 border",
+                                    activeFilter === filter
+                                        ? "bg-foreground text-background border-foreground shadow-lg shadow-foreground/20"
+                                        : "bg-background text-muted-foreground border-border hover:border-foreground/20 hover:text-foreground"
+                                )}
                             >
-                                <X className="w-4 h-4" />
+                                {filter}
                             </button>
-                        )}
+                        ))}
                     </div>
                 </div>
             </header>
 
-            <motion.div
-                variants={staggerContainer}
-                initial="initial"
-                animate="animate"
-                className="p-4"
-            >
-                <AnimatePresence mode="wait">
-                    {query.length === 0 ? (
-                        // Empty state: show recent & trending
-                        <motion.div
-                            key="empty"
-                            variants={staggerContainer}
-                            initial="initial"
-                            animate="animate"
-                            exit={{ opacity: 0 }}
-                            className="space-y-6"
-                        >
-                            {/* Recent Searches */}
-                            {recentSearches.length > 0 && (
-                                <motion.div variants={fadeInUp}>
-                                    <div className="flex items-center justify-between mb-3">
-                                        <h2 className="font-display font-bold flex items-center gap-2">
-                                            <Clock className="w-4 h-4" />
-                                            Recent Searches
-                                        </h2>
-                                        <button className="text-xs text-muted-foreground">
-                                            Clear
-                                        </button>
-                                    </div>
-                                    <div className="flex flex-wrap gap-2">
-                                        {recentSearches.map((search) => (
-                                            <Badge
-                                                key={search}
-                                                variant="secondary"
-                                                className="cursor-pointer hover:bg-secondary/80"
-                                                onClick={() => handleSearch(search)}
+            {/* Main Content */}
+            <div className="flex-1 overflow-y-auto scrollbar-thin">
+                <div className="p-4 max-w-4xl mx-auto min-h-full">
+                    <AnimatePresence mode="wait">
+                        {query.length === 0 ? (
+                            // Empty state: Discovery Mode
+                            <motion.div
+                                key="discovery"
+                                variants={staggerContainer}
+                                initial="initial"
+                                animate="animate"
+                                exit={{ opacity: 0 }}
+                                className="space-y-8 py-4"
+                            >
+                                {/* Recent Searches */}
+                                {recentSearches.length > 0 && (
+                                    <motion.div variants={fadeInUp} className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <h2 className="font-bold text-sm text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                                                <Clock className="w-4 h-4" />
+                                                Recent
+                                            </h2>
+                                            <Button variant="ghost" size="sm" className="h-auto p-0 text-xs text-muted-foreground hover:text-primary">
+                                                Clear All
+                                            </Button>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {recentSearches.map((search) => (
+                                                <div
+                                                    key={search}
+                                                    onClick={() => handleSearch(search)}
+                                                    className="group cursor-pointer px-4 py-2 rounded-xl bg-muted/30 border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all active:scale-95 flex items-center gap-2"
+                                                >
+                                                    <span className="text-sm font-medium group-hover:text-primary transition-colors">{search}</span>
+                                                    <ArrowLeft className="w-3 h-3 text-muted-foreground/50 rotate-180 group-hover:text-primary/50 group-hover:translate-x-0.5 transition-all" />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </motion.div>
+                                )}
+
+                                {/* Popular / Trending */}
+                                <motion.div variants={fadeInUp} className="space-y-4">
+                                    <h2 className="font-bold text-sm text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                                        <TrendingUp className="w-4 h-4" />
+                                        Trending Now
+                                    </h2>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {trendingProducts.map((product, i) => (
+                                            <div
+                                                key={product.id}
+                                                className="flex items-center gap-4 p-3 rounded-2xl bg-card border border-border/50 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 transition-all cursor-pointer group"
                                             >
-                                                {search}
-                                            </Badge>
+                                                <div className="w-12 h-12 rounded-xl bg-muted flex-shrink-0 flex items-center justify-center relative overflow-hidden">
+                                                    <ShoppingBag className="w-5 h-5 text-muted-foreground group-hover:scale-110 transition-transform" />
+                                                    <div className="absolute top-0 left-0 bg-primary/10 text-[10px] font-bold px-1.5 py-0.5 rounded-br-lg text-primary">#{i + 1}</div>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-semibold text-sm truncate group-hover:text-primary transition-colors">{product.name}</p>
+                                                    <p className="text-xs text-muted-foreground">{product.category}</p>
+                                                </div>
+                                                <TrendingUp className="w-4 h-4 text-emerald-500/50" />
+                                            </div>
                                         ))}
                                     </div>
                                 </motion.div>
-                            )}
 
-                            {/* Popular Searches */}
-                            <motion.div variants={fadeInUp}>
-                                <h2 className="font-display font-bold flex items-center gap-2 mb-3">
-                                    <TrendingUp className="w-4 h-4" />
-                                    Popular Right Now
-                                </h2>
-                                <div className="flex flex-wrap gap-2">
-                                    {CHAT_SUGGESTIONS.map((suggestion) => (
-                                        <Badge
-                                            key={suggestion}
-                                            variant="outline"
-                                            className="cursor-pointer hover:bg-muted"
-                                            onClick={() => handleSearch(suggestion)}
-                                        >
-                                            {suggestion}
-                                        </Badge>
-                                    ))}
-                                </div>
+                                {/* Categories Grid */}
+                                <motion.div variants={fadeInUp} className="space-y-4">
+                                    <h2 className="font-bold text-sm text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                                        <Sparkles className="w-4 h-4" />
+                                        Explore Categories
+                                    </h2>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        {PRODUCT_CATEGORIES.slice(0, 8).map((category) => (
+                                            <Link
+                                                key={category.id}
+                                                href={`/search?category=${category.id}`}
+                                                className="flex flex-col items-center justify-center gap-2 p-4 rounded-3xl bg-muted/20 border border-border/50 hover:bg-background hover:shadow-md hover:border-primary/20 transition-all group aspect-square"
+                                            >
+                                                <span className="text-3xl group-hover:scale-110 transition-transform duration-300 filter group-hover:drop-shadow-lg">
+                                                    {category.emoji}
+                                                </span>
+                                                <span className="text-xs font-semibold text-center group-hover:text-primary transition-colors">
+                                                    {category.name}
+                                                </span>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </motion.div>
                             </motion.div>
+                        ) : (
+                            // Search Results
+                            <motion.div
+                                key="results"
+                                variants={staggerContainer}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="space-y-6"
+                            >
+                                {/* Results Actions */}
+                                {results.length > 0 && !isSearching && (
+                                    <div className="flex items-center justify-between pb-2 border-b border-border/40">
+                                        <p className="text-sm font-medium text-muted-foreground">
+                                            Found <span className="text-foreground font-bold">{results.length}</span> results
+                                        </p>
+                                        <div className="flex gap-1 bg-muted/50 p-1 rounded-lg">
+                                            <button
+                                                onClick={() => setViewMode("grid")}
+                                                className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                                            >
+                                                <LayoutGrid className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => setViewMode("list")}
+                                                className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                                            >
+                                                <List className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
 
-                            {/* Categories */}
-                            <motion.div variants={fadeInUp}>
-                                <h2 className="font-display font-bold flex items-center gap-2 mb-3">
-                                    <Sparkles className="w-4 h-4" />
-                                    Browse Categories
-                                </h2>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                    {PRODUCT_CATEGORIES.slice(0, 6).map((category) => (
-                                        <Link
-                                            key={category.id}
-                                            href={`/search?category=${category.id}`}
-                                        >
-                                            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-                                                <CardContent className="p-4 text-center">
-                                                    <span className="text-2xl mb-2 block">
-                                                        {category.emoji}
-                                                    </span>
-                                                    <span className="text-sm font-medium">
-                                                        {category.name}
-                                                    </span>
-                                                </CardContent>
-                                            </Card>
-                                        </Link>
-                                    ))}
-                                </div>
-                            </motion.div>
-
-                            {/* Trending Products */}
-                            <motion.div variants={fadeInUp}>
-                                <h2 className="font-display font-bold mb-3">
-                                    Trending Products
-                                </h2>
-                                <div className="space-y-3">
-                                    {trendingProducts.map((product, i) => (
-                                        <Link key={product.id} href={`/product/${product.id}`}>
-                                            <Card className="hover:border-primary/50 transition-colors">
-                                                <CardContent className="p-3 flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center font-bold text-sm text-muted-foreground">
-                                                        {i + 1}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-medium text-sm truncate">
-                                                            {product.name}
-                                                        </p>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {product.category}
-                                                        </p>
-                                                    </div>
-                                                    <span className="font-semibold text-sm">
-                                                        {formatNaira(product.price)}
-                                                    </span>
-                                                </CardContent>
-                                            </Card>
-                                        </Link>
-                                    ))}
-                                </div>
-                            </motion.div>
-                        </motion.div>
-                    ) : (
-                        // Search results
-                        <motion.div
-                            key="results"
-                            variants={staggerContainer}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="space-y-4"
-                        >
-                            {isSearching ? (
-                                <div className="py-8 text-center text-muted-foreground">
-                                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                                    <p className="text-sm">Searching...</p>
-                                </div>
-                            ) : results.length > 0 ? (
-                                <>
-                                    <p className="text-sm text-muted-foreground">
-                                        {results.length} results for "{query}"
-                                    </p>
-                                    <div className="space-y-3">
+                                {isSearching ? (
+                                    <div className="py-24 flex flex-col items-center justify-center text-center">
+                                        <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-6" />
+                                        <p className="font-medium text-lg animate-pulse">Searching Debelu...</p>
+                                    </div>
+                                ) : results.length > 0 ? (
+                                    <div className={cn(
+                                        "grid gap-4",
+                                        viewMode === "grid" ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "grid-cols-1"
+                                    )}>
                                         {results.map((product) => (
-                                            <Link key={product.id} href={`/product/${product.id}`}>
-                                                <Card className="hover:border-primary/50 transition-colors">
-                                                    <CardContent className="p-4 flex gap-4">
-                                                        <div className="w-20 h-20 rounded-xl bg-muted flex-shrink-0 flex items-center justify-center text-xs text-muted-foreground">
-                                                            No img
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="font-medium text-sm line-clamp-2 mb-1">
-                                                                {product.name}
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground mb-2">
-                                                                {product.vendorName} • ⭐ {product.rating}
-                                                            </p>
-                                                            <div className="flex items-baseline gap-2">
-                                                                <span className="font-bold">
-                                                                    {formatNaira(product.price)}
-                                                                </span>
-                                                                {product.compareAtPrice && (
-                                                                    <span className="text-xs text-muted-foreground line-through">
-                                                                        {formatNaira(product.compareAtPrice)}
+                                            <Link key={product.id} href={`/product/${product.id}`} className="group">
+                                                <Card className={cn(
+                                                    "overflow-hidden hover:border-primary/50 transition-all hover:shadow-xl hover:shadow-primary/5 h-full",
+                                                    viewMode === 'list' && "flex flex-row"
+                                                )}>
+                                                    <div className={cn(
+                                                        "bg-muted flex items-center justify-center text-xs text-muted-foreground relative overflow-hidden",
+                                                        viewMode === "grid" ? "aspect-square w-full" : "w-32 aspect-square flex-shrink-0"
+                                                    )}>
+                                                        <div className="w-full h-full bg-muted group-hover:scale-105 transition-transform duration-500" />
+                                                        <span className="absolute inset-0 flex items-center justify-center">No Image</span>
+                                                        {product.compareAtPrice && (
+                                                            <Badge variant="destructive" className="absolute top-2 left-2 text-[10px] px-1.5 py-0.5">Sale</Badge>
+                                                        )}
+                                                    </div>
+                                                    <CardContent className={cn("p-4 flex flex-col justify-between flex-1", viewMode === 'list' && "py-3")}>
+                                                        <div>
+                                                            <p className="text-xs text-muted-foreground mb-1">{product.category}</p>
+                                                            <h3 className="font-semibold text-sm line-clamp-2 mb-2 group-hover:text-primary transition-colors">{product.name}</h3>
+                                                            {product.rating && (
+                                                                <div className="flex items-center gap-1 mb-2">
+                                                                    <span className="text-[10px] bg-yellow-400/20 text-yellow-600 px-1.5 py-0.5 rounded font-bold flex items-center gap-1">
+                                                                        ⭐ {product.rating}
                                                                     </span>
-                                                                )}
-                                                            </div>
+                                                                    <span className="text-[10px] text-muted-foreground">({product.reviewCount})</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="mt-2">
+                                                            <p className="font-bold text-lg text-primary">{formatNaira(product.price)}</p>
+                                                            {product.compareAtPrice && (
+                                                                <p className="text-xs text-muted-foreground line-through">{formatNaira(product.compareAtPrice)}</p>
+                                                            )}
                                                         </div>
                                                     </CardContent>
                                                 </Card>
                                             </Link>
                                         ))}
                                     </div>
-                                </>
-                            ) : query.length > 2 ? (
-                                <div className="py-8 text-center">
-                                    <Search className="w-8 h-8 mx-auto mb-3 text-muted-foreground" />
-                                    <p className="font-medium">No results found</p>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        Try a different search term
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className="py-8 text-center text-muted-foreground">
-                                    <p className="text-sm">Type at least 3 characters to search</p>
-                                </div>
-                            )}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </motion.div>
+                                ) : (
+                                    <div className="py-20 text-center">
+                                        <div className="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                            <Search className="w-10 h-10 text-muted-foreground/50" />
+                                        </div>
+                                        <h3 className="font-display font-bold text-xl mb-2">No matches found</h3>
+                                        <p className="text-muted-foreground max-w-xs mx-auto mb-6">
+                                            We couldn't find any products matching "{query}". Try checking your spelling or use more general terms.
+                                        </p>
+                                        <Button variant="outline" onClick={clearSearch}>
+                                            Clear Search
+                                        </Button>
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            </div>
         </div>
     );
 }

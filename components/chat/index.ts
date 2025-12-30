@@ -4,3 +4,6 @@ export { MessageBubble } from "./message-bubble";
 export { ProductCardChat } from "./product-card-chat";
 export { TypingIndicator } from "./typing-indicator";
 export { WelcomeState } from "./welcome-state";
+export { ProductIntelligencePanel } from "./product-intelligence-panel";
+export * from './product-intelligence-panel';
+export * from './product-intelligence-panel';

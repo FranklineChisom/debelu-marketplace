@@ -11,13 +11,16 @@ import {
     Users,
     Coins,
     CheckCircle,
+    Sparkles,
+    ChevronRight,
+    Wallet
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatNaira } from "@/lib/utils";
+import { formatNaira, cn } from "@/lib/utils";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
+import { Separator } from "@/components/ui/separator";
 
 const referralStats = {
     code: "CHIOMA2024",
@@ -28,9 +31,9 @@ const referralStats = {
 };
 
 const referralHistory = [
-    { name: "Emeka O.", status: "completed", amount: 500, date: "2 days ago" },
-    { name: "Blessing N.", status: "completed", amount: 500, date: "1 week ago" },
-    { name: "Tunde B.", status: "pending", amount: 500, date: "3 days ago" },
+    { name: "Emeka O.", status: "completed", amount: 500, date: "2 days ago", avatarColor: "bg-blue-500/20 text-blue-600" },
+    { name: "Blessing N.", status: "completed", amount: 500, date: "1 week ago", avatarColor: "bg-purple-500/20 text-purple-600" },
+    { name: "Tunde B.", status: "pending", amount: 500, date: "3 days ago", avatarColor: "bg-amber-500/20 text-amber-600" },
 ];
 
 export default function ReferralPage() {
@@ -62,163 +65,197 @@ export default function ReferralPage() {
     };
 
     return (
-        <div className="min-h-screen bg-background pb-20">
-            {/* Header */}
-            <header className="h-14 flex items-center justify-between px-4 border-b bg-background sticky top-0 z-30">
-                <button
-                    onClick={() => router.back()}
-                    className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-muted transition-colors"
-                >
-                    <ArrowLeft className="w-5 h-5" />
-                </button>
-                <h1 className="font-display text-lg font-bold">Refer & Earn</h1>
-                <div className="w-10" />
+        <div className="min-h-screen bg-background pb-20 flex flex-col">
+            {/* Premium Sticky Header */}
+            <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/40 safe-top">
+                <div className="flex items-center justify-between p-4 max-w-4xl mx-auto">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => router.back()}
+                        className="rounded-full hover:bg-muted"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </Button>
+                    <h1 className="font-display text-lg font-bold">Refer & Earn</h1>
+                    <div className="w-9" /> {/* Spacer for centering */}
+                </div>
             </header>
 
-            <motion.div
-                variants={staggerContainer}
-                initial="initial"
-                animate="animate"
-                className="p-4 space-y-6"
-            >
-                {/* Hero */}
-                <motion.div variants={fadeInUp}>
-                    <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground overflow-hidden">
-                        <CardContent className="p-6 text-center relative">
-                            <Gift className="w-12 h-12 mx-auto mb-4" />
-                            <h2 className="font-display text-2xl font-bold mb-2">
-                                Earn ₦500 per Referral
-                            </h2>
-                            <p className="text-sm text-primary-foreground/80 mb-4">
-                                Share your code with friends. When they make their first
-                                purchase, you both get ₦500!
-                            </p>
+            {/* Main Content */}
+            <div className="flex-1 overflow-y-auto scrollbar-thin">
+                <motion.div
+                    variants={staggerContainer}
+                    initial="initial"
+                    animate="animate"
+                    className="p-4 max-w-4xl mx-auto space-y-8"
+                >
+                    {/* Hero Card */}
+                    <motion.div variants={fadeInUp}>
+                        <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-primary to-violet-600 text-primary-foreground shadow-2xl">
+                            {/* Decorative Background Elements */}
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                            <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+                            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
 
-                            {/* Referral Code */}
-                            <div className="bg-white/10 backdrop-blur rounded-xl p-4 mb-4">
-                                <p className="text-xs mb-2">Your Referral Code</p>
-                                <div className="flex items-center justify-center gap-2">
-                                    <span className="font-mono text-xl font-bold tracking-wider">
-                                        {referralStats.code}
-                                    </span>
-                                    <button
+                            <CardContent className="relative z-10 p-8 text-center">
+                                <motion.div
+                                    initial={{ scale: 0.8, rotate: -10 }}
+                                    animate={{ scale: 1, rotate: 0 }}
+                                    transition={{ type: "spring", bounce: 0.5 }}
+                                    className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-lg"
+                                >
+                                    <Gift className="w-10 h-10 text-white drop-shadow-md" />
+                                </motion.div>
+
+                                <h2 className="font-display text-3xl md:text-4xl font-black mb-3 tracking-tight">
+                                    Earn ₦500 per Referral
+                                </h2>
+                                <p className="text-primary-foreground/90 text-sm md:text-base max-w-md mx-auto mb-8 leading-relaxed">
+                                    Invite your friends to Debelu. They get <span className="font-bold bg-white/20 px-1.5 py-0.5 rounded">₦500 off</span> their first order, and you get <span className="font-bold bg-white/20 px-1.5 py-0.5 rounded">₦500 cash</span> when they shop.
+                                </p>
+
+                                {/* Referral Code Box */}
+                                <div className="max-w-sm mx-auto bg-white/10 backdrop-blur-md rounded-2xl p-1.5 border border-white/20 shadow-inner flex items-center gap-2">
+                                    <div className="flex-1 bg-white/10 rounded-xl px-4 py-3 flex flex-col items-center justify-center">
+                                        <span className="text-[10px] uppercase tracking-widest opacity-70 font-medium">Your Code</span>
+                                        <span className="font-mono text-xl font-bold tracking-wider">{referralStats.code}</span>
+                                    </div>
+                                    <Button
                                         onClick={handleCopy}
-                                        className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+                                        size="icon"
+                                        className="h-14 w-14 rounded-xl bg-white text-primary hover:bg-white/90 hover:scale-105 transition-all shadow-lg"
                                     >
                                         {copied ? (
-                                            <CheckCircle className="w-4 h-4" />
+                                            <CheckCircle className="w-6 h-6 text-green-600" />
                                         ) : (
-                                            <Copy className="w-4 h-4" />
+                                            <Copy className="w-6 h-6" />
                                         )}
-                                    </button>
+                                    </Button>
                                 </div>
-                            </div>
 
-                            <Button
-                                onClick={handleShare}
-                                variant="secondary"
-                                className="w-full"
-                            >
-                                <Share2 className="w-4 h-4 mr-2" />
-                                Share with Friends
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </motion.div>
+                                <div className="mt-6 flex justify-center">
+                                    <Button
+                                        onClick={handleShare}
+                                        variant="ghost"
+                                        className="text-white hover:bg-white/10 rounded-full text-sm font-medium"
+                                    >
+                                        <Share2 className="w-4 h-4 mr-2" />
+                                        Share Link Instead
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </div>
+                    </motion.div>
 
-                {/* Stats */}
-                <motion.div variants={fadeInUp} className="grid grid-cols-2 gap-4">
-                    <Card>
-                        <CardContent className="p-4 text-center">
-                            <Users className="w-6 h-6 mx-auto mb-2 text-primary" />
-                            <p className="text-2xl font-bold">
-                                {referralStats.totalReferrals}
-                            </p>
-                            <p className="text-xs text-muted-foreground">Total Referrals</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent className="p-4 text-center">
-                            <Coins className="w-6 h-6 mx-auto mb-2 text-success" />
-                            <p className="text-2xl font-bold">
-                                {formatNaira(referralStats.earnedAmount)}
-                            </p>
-                            <p className="text-xs text-muted-foreground">Total Earned</p>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-
-                {/* Pending */}
-                {referralStats.pendingAmount > 0 && (
-                    <motion.div variants={fadeInUp}>
-                        <Card className="bg-warning/10 border-warning/20">
-                            <CardContent className="p-4 flex items-center justify-between">
+                    {/* Stats Grid */}
+                    <motion.div variants={fadeInUp} className="grid grid-cols-2 gap-4">
+                        <Card className="bg-card border-border/50 shadow-sm hover:shadow-md transition-all">
+                            <CardContent className="p-5 flex flex-col items-center text-center gap-2">
+                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                    <Users className="w-5 h-5 text-primary" />
+                                </div>
                                 <div>
-                                    <p className="font-medium text-sm">Pending Earnings</p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {referralStats.pendingReferrals} friends haven't ordered yet
-                                    </p>
+                                    <p className="text-3xl font-black">{referralStats.totalReferrals}</p>
+                                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Friends Invited</p>
                                 </div>
-                                <span className="font-bold">
-                                    {formatNaira(referralStats.pendingAmount)}
-                                </span>
+                            </CardContent>
+                        </Card>
+                        <Card className="bg-card border-border/50 shadow-sm hover:shadow-md transition-all">
+                            <CardContent className="p-5 flex flex-col items-center text-center gap-2">
+                                <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                                    <Wallet className="w-5 h-5 text-emerald-600" />
+                                </div>
+                                <div>
+                                    <p className="text-3xl font-black text-emerald-600">{formatNaira(referralStats.earnedAmount)}</p>
+                                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Total Earned</p>
+                                </div>
                             </CardContent>
                         </Card>
                     </motion.div>
-                )}
 
-                {/* How it Works */}
-                <motion.div variants={fadeInUp}>
-                    <h2 className="font-display font-bold mb-3">How It Works</h2>
-                    <div className="space-y-3">
-                        {[
-                            { step: "1", text: "Share your unique referral code" },
-                            { step: "2", text: "Friend signs up and makes first purchase" },
-                            { step: "3", text: "You both get ₦500 credited instantly" },
-                        ].map((item) => (
-                            <div key={item.step} className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
-                                    {item.step}
+                    {/* Pending Earnings Alert */}
+                    {referralStats.pendingAmount > 0 && (
+                        <motion.div variants={fadeInUp}>
+                            <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4 flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                                    <Sparkles className="w-5 h-5 text-amber-600" />
                                 </div>
-                                <span className="text-sm">{item.text}</span>
+                                <div className="flex-1">
+                                    <h3 className="font-bold text-sm text-amber-900 dark:text-amber-100">Pending Earnings</h3>
+                                    <p className="text-xs text-amber-700/80 dark:text-amber-200/80">
+                                        <span className="font-bold">{formatNaira(referralStats.pendingAmount)}</span> creates awaiting completion from {referralStats.pendingReferrals} friends.
+                                    </p>
+                                </div>
+                                <Button size="sm" variant="outline" className="h-8 text-xs border-amber-500/30 text-amber-700 bg-transparent hover:bg-amber-500/10">
+                                    Nudge
+                                </Button>
                             </div>
-                        ))}
-                    </div>
-                </motion.div>
+                        </motion.div>
+                    )}
 
-                {/* Referral History */}
-                <motion.div variants={fadeInUp}>
-                    <h2 className="font-display font-bold mb-3">Referral History</h2>
-                    <Card>
-                        <CardContent className="p-0 divide-y">
-                            {referralHistory.map((ref, i) => (
-                                <div
-                                    key={i}
-                                    className="flex items-center justify-between p-4"
-                                >
-                                    <div>
-                                        <p className="font-medium text-sm">{ref.name}</p>
-                                        <p className="text-xs text-muted-foreground">{ref.date}</p>
+                    {/* How it Works Horizontal Steps */}
+                    <motion.div variants={fadeInUp} className="space-y-4">
+                        <h3 className="font-display font-bold text-lg">How It Works</h3>
+                        <div className="flex items-start justify-between relative">
+                            {/* Connector Line */}
+                            <div className="absolute top-4 left-0 w-full h-0.5 bg-muted -z-10" />
+
+                            {[
+                                { step: "1", title: "Invite", desc: "Share code" },
+                                { step: "2", title: "They Shop", desc: "First order" },
+                                { step: "3", title: "Earn", desc: "Get paid" },
+                            ].map((item, i) => (
+                                <div key={item.step} className="flex flex-col items-center gap-2 bg-background px-2">
+                                    <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm ring-4 ring-background">
+                                        {item.step}
                                     </div>
-                                    <div className="text-right">
-                                        <Badge
-                                            variant={
-                                                ref.status === "completed" ? "success" : "warning"
-                                            }
-                                            className="mb-1"
-                                        >
-                                            {ref.status}
-                                        </Badge>
-                                        <p className="text-sm font-medium">
-                                            {formatNaira(ref.amount)}
-                                        </p>
+                                    <div className="text-center">
+                                        <p className="text-xs font-bold">{item.title}</p>
+                                        <p className="text-[10px] text-muted-foreground">{item.desc}</p>
                                     </div>
                                 </div>
                             ))}
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </motion.div>
+
+                    {/* Referral History List */}
+                    <motion.div variants={fadeInUp} className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="font-display font-bold text-lg">Recent Invites</h3>
+                            <Button variant="link" className="text-xs h-auto p-0">View All</Button>
+                        </div>
+
+                        <div className="bg-card border border-border/50 rounded-2xl divide-y divide-border/50 shadow-sm overflow-hidden">
+                            {referralHistory.map((ref, i) => (
+                                <div key={i} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className={cn("w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold", ref.avatarColor)}>
+                                            {ref.name.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold">{ref.name}</p>
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant="secondary" className={cn(
+                                                    "h-5 text-[10px] px-1.5 font-medium rounded-full",
+                                                    ref.status === 'completed' ? "bg-green-500/10 text-green-700" : "bg-amber-500/10 text-amber-700"
+                                                )}>
+                                                    {ref.status === 'completed' ? 'Completed' : 'Pending'}
+                                                </Badge>
+                                                <span className="text-[10px] text-muted-foreground">• {ref.date}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="font-bold text-sm text-primary">{formatNaira(ref.amount)}</p>
+                                        <p className="text-[10px] text-muted-foreground">Commission</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </motion.div>
                 </motion.div>
-            </motion.div>
+            </div>
         </div>
     );
 }
