@@ -1,16 +1,16 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Order } from '@/types/order';
-import { OrderStatus } from '@/lib/constants';
-import { Product } from '@/types/product';
-import { User, Address, PaymentMethod, UserProfile } from '@/types/user';
-import { INITIAL_PRODUCTS, INITIAL_ORDERS, mockUser } from '@/lib/mock-db';
+import { User, Address, PaymentMethod, UserProfile, Vendor, PlatformSettings } from '@/types/user';
+import { INITIAL_PRODUCTS, INITIAL_ORDERS, mockUser, INITIAL_VENDORS, INITIAL_USERS } from '@/lib/mock-db';
 
 interface MarketplaceState {
     // Data
     products: Product[];
     orders: Order[];
     user: User | null;
+    vendors: Vendor[];
+    users: User[];
+    platformSettings: PlatformSettings;
 
     // Actions
     addProduct: (product: Product) => void;
@@ -30,6 +30,12 @@ interface MarketplaceState {
     deletePaymentMethod: (id: string) => void;
     setDefaultPaymentMethod: (id: string) => void;
 
+    // Admin Actions
+    verifyVendor: (vendorId: string, status: 'approved' | 'rejected') => void;
+    suspendVendor: (vendorId: string) => void;
+    banUser: (userId: string) => void;
+    updatePlatformSettings: (settings: Partial<PlatformSettings>) => void;
+
     // Reset (for testing)
     resetStore: () => void;
 }
@@ -40,6 +46,15 @@ export const useMarketplaceStore = create<MarketplaceState>()(
             products: INITIAL_PRODUCTS,
             orders: INITIAL_ORDERS,
             user: mockUser,
+            vendors: INITIAL_VENDORS,
+            users: INITIAL_USERS,
+            platformSettings: {
+                commissionRate: 5,
+                withdrawalFee: 50,
+                minWithdrawal: 1000,
+                maintenanceMode: false,
+                allowNewRegistrations: true
+            },
 
             addProduct: (product) => set((state) => ({
                 products: [product, ...state.products]
@@ -124,10 +139,36 @@ export const useMarketplaceStore = create<MarketplaceState>()(
                 } : null
             })),
 
+            verifyVendor: (vendorId, status) => set((state) => ({
+                vendors: state.vendors.map(v =>
+                    v.id === vendorId
+                        ? { ...v, verificationStatus: status, isVerified: status === 'approved', approvedAt: status === 'approved' ? new Date().toISOString() : undefined }
+                        : v
+                )
+            })),
+
+            suspendVendor: (vendorId) => set((state) => ({
+                vendors: state.vendors.map(v =>
+                    v.id === vendorId
+                        ? { ...v, isVerified: false, verificationStatus: 'rejected' } // distinct suspend status? for now reject/unverify
+                        : v
+                )
+            })),
+
+            banUser: (userId) => set((state) => ({
+                users: state.users.filter(u => u.id !== userId) // For now, delete. Ideally toggle 'isBanned' flag if User model supports it.
+            })),
+
+            updatePlatformSettings: (settings) => set((state) => ({
+                platformSettings: { ...state.platformSettings, ...settings }
+            })),
+
             resetStore: () => set({
                 products: INITIAL_PRODUCTS,
                 orders: INITIAL_ORDERS,
-                user: mockUser
+                user: mockUser,
+                vendors: INITIAL_VENDORS,
+                users: INITIAL_USERS
             }),
         }),
         {

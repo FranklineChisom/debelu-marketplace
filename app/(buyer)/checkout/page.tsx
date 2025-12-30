@@ -132,7 +132,7 @@ export default function CheckoutPage() {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const placeOrder = useMarketplaceStore((state) => state.placeOrder);
+
 
     const handlePlaceOrder = () => {
         setIsProcessing(true);

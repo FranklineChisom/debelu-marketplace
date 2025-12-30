@@ -169,3 +169,11 @@ export interface VendorSummary {
     isVerified: boolean;
     campusId: CampusId;
 }
+
+export interface PlatformSettings {
+    commissionRate: number; // Percentage (e.g., 5 for 5%)
+    withdrawalFee: number; // Fixed amount
+    minWithdrawal: number;
+    maintenanceMode: boolean;
+    allowNewRegistrations: boolean;
+}

@@ -1,7 +1,64 @@
 import { Product } from "@/types/product";
 import { Order } from "@/types/order";
 import { OrderStatus } from "@/lib/constants";
-import { User } from "@/types/user";
+import { User, Vendor } from "@/types/user";
+
+// Initial Mock Vendors
+export const INITIAL_VENDORS: Vendor[] = [
+    {
+        id: "vendor-1",
+        userId: "user-vendor-1",
+        businessName: "Chisom Gadgets",
+        description: "Your number one plug for all things tech on campus.",
+        campusId: "unilag",
+        phone: "+2348012345678",
+        email: "store@chisomgadgets.com",
+        isVerified: true,
+        verificationStatus: "approved",
+        rating: 4.8,
+        reviewCount: 450,
+        totalSales: 1200,
+        totalRevenue: 5000000,
+        productCount: 45,
+        responseRate: 98,
+        responseTime: 15,
+        settings: {
+            isOpen: true,
+            autoAcceptOrders: true,
+            deliveryZones: [],
+            businessHours: []
+        },
+        createdAt: "2023-09-01T00:00:00Z",
+        approvedAt: "2023-09-02T00:00:00Z"
+    },
+    {
+        id: "vendor-2",
+        userId: "user-vendor-2",
+        businessName: "Campus Cravings",
+        description: "Best chops and meals.",
+        campusId: "unilag",
+        phone: "+2348098765432",
+        isVerified: false,
+        verificationStatus: "pending",
+        verificationDocs: ["https://example.com/cac.pdf"],
+        rating: 0,
+        reviewCount: 0,
+        totalSales: 0,
+        totalRevenue: 0,
+        productCount: 0,
+        responseRate: 0,
+        responseTime: 0,
+        settings: {
+            isOpen: false,
+            autoAcceptOrders: false,
+            deliveryZones: [],
+            businessHours: []
+        },
+        createdAt: new Date().toISOString()
+    }
+];
+
+
 
 // Initial Mock Products (Vendor View Source)
 export const INITIAL_PRODUCTS: Product[] = [
@@ -179,5 +236,46 @@ export const INITIAL_ORDERS: Order[] = [
         statusHistory: [],
         createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
         updatedAt: new Date().toISOString()
+    }
+];
+
+// Initial Mock Users (Admin View)
+export const INITIAL_USERS: User[] = [
+    mockUser,
+    {
+        ...mockUser,
+        id: "user-2",
+        profile: {
+            ...mockUser.profile,
+            firstName: "Tola",
+            lastName: "Bello",
+            username: "@tolab",
+            email: "tola.bello@example.com",
+            phone: "+2348055555555",
+            avatar: "",
+            bio: "",
+            campusId: "unilag"
+        },
+        role: "buyer",
+        orderCount: 12,
+        totalSpent: 450000,
+        createdAt: "2023-10-15T00:00:00Z"
+    },
+    {
+        ...mockUser,
+        id: "user-vendor-1", // Linked to vendor-1
+        profile: {
+            ...mockUser.profile,
+            firstName: "Chisom",
+            lastName: "Vendor",
+            username: "@chisomvendors",
+            email: "store@chisomgadgets.com",
+            phone: "+2348012345678",
+            avatar: "",
+            bio: "",
+            campusId: "unilag"
+        },
+        role: "vendor",
+        createdAt: "2023-09-01T00:00:00Z"
     }
 ];

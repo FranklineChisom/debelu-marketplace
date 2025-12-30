@@ -30,20 +30,57 @@ const stats = [
     { label: "Rating", value: 4.8, change: 0.2, format: "rating", trend: "up" },
 ];
 
-const recentOrders = [
-    { id: "ORD-001", customer: "Chioma A.", amount: 25000, status: "pending", time: "2 mins ago" },
-    { id: "ORD-002", customer: "Tunde O.", amount: 18500, status: "processing", time: "15 mins ago" },
-    { id: "ORD-003", customer: "Ngozi E.", amount: 42000, status: "delivered", time: "1 hour ago" },
-    { id: "ORD-004", customer: "Kunle B.", amount: 12000, status: "delivered", time: "3 hours ago" },
-];
 
-const topProducts = [
-    { id: "1", name: "Dell Inspiron 15 Laptop", sales: 12, revenue: 1980000 },
-    { id: "2", name: "USB-C Fast Charger", sales: 45, revenue: 202500 },
-    { id: "3", name: "Wireless Mouse Pro", sales: 32, revenue: 160000 },
-];
+
+import { useMarketplaceStore } from "@/stores/useMarketplaceStore";
+import { formatRelativeTime } from "@/lib/utils";
 
 export default function VendorDashboardPage() {
+    const orders = useMarketplaceStore((state) => state.orders);
+    const products = useMarketplaceStore((state) => state.products);
+
+    // Calculate Stats
+    const totalRevenue = orders.reduce((acc, order) => acc + order.total, 0);
+    const orderCount = orders.length;
+    const productCount = products.length;
+
+    // Mock rating for now as we don't have reviews store yet
+    const averageRating = 4.8;
+
+    // Calculate Top Products dynamically
+    const productSales = orders.flatMap(o => o.items).reduce((acc, item) => {
+        if (!acc[item.productId]) {
+            acc[item.productId] = {
+                id: item.productId,
+                name: item.productName,
+                sales: 0,
+                revenue: 0
+            };
+        }
+        acc[item.productId].sales += item.quantity;
+        acc[item.productId].revenue += (item.price * item.quantity);
+        return acc;
+    }, {} as Record<string, { id: string, name: string, sales: number, revenue: number }>);
+
+    const topProducts = (Object.values(productSales) as { id: string, name: string, sales: number, revenue: number }[])
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 3);
+
+    const stats = [
+        { label: "Revenue", value: totalRevenue, change: 12.5, format: "currency", trend: "up" },
+        { label: "Orders", value: orderCount, change: -5.3, format: "number", trend: "down" },
+        { label: "Products", value: productCount, change: 8.2, format: "number", trend: "up" },
+        { label: "Rating", value: averageRating, change: 0.2, format: "rating", trend: "up" },
+    ];
+
+    const recentOrdersList = orders.slice(0, 5).map(order => ({
+        id: order.orderNumber,
+        customer: order.buyerName,
+        amount: order.total,
+        status: order.status,
+        time: formatRelativeTime(order.createdAt)
+    }));
+
     return (
         <div className="flex-1 overflow-y-auto scrollbar-thin">
             <motion.div
@@ -124,7 +161,9 @@ export default function VendorDashboardPage() {
                             </Link>
                         </div>
                         <div className="border border-foreground/10 rounded-2xl divide-y divide-foreground/10">
-                            {recentOrders.map((order) => (
+                            {recentOrdersList.length === 0 ? (
+                                <div className="p-8 text-center text-muted-foreground">No recent orders</div>
+                            ) : recentOrdersList.map((order) => (
                                 <Link
                                     key={order.id}
                                     href={`/vendor/orders/${order.id}`}
@@ -177,7 +216,7 @@ export default function VendorDashboardPage() {
                                     </span>
                                     <div className="flex-1 min-w-0">
                                         <p className="font-bold line-clamp-1">{product.name}</p>
-                                        <p className="text-sm text-muted-foreground">{product.sales} sold</p>
+                                        <p className="text-xs sm:text-sm text-muted-foreground">{product.sales} sold</p>
                                     </div>
                                     <span className="font-black text-emerald-400">
                                         {formatNaira(product.revenue)}
