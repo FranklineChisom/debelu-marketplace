@@ -1,17 +1,38 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, MessageSquare, History, MoreHorizontal, Menu, User } from "lucide-react";
+import {
+    Plus,
+    MessageSquare,
+    MoreHorizontal,
+    Menu,
+    User,
+    Search,
+    Trash2,
+    X,
+    Sparkles,
+    Clock,
+    Edit3,
+    Share,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import {
     Sheet,
     SheetContent,
     SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 import { ChatContainer } from "@/components/chat/chat-container";
 import { ChatInput } from "@/components/chat/chat-input";
 import { ProductDetailPanel } from "@/components/chat/product-detail-panel";
@@ -29,60 +50,132 @@ export default function ChatPage() {
     const activePanel = useChatStore((state) => state.activePanel);
     const history = useChatStore((state) => state.history);
 
+    const [searchQuery, setSearchQuery] = useState("");
+
     const handleNewChat = () => {
         startNewSession();
     };
 
-    const SidebarContent = () => (
-        <div className="flex flex-col gap-4 h-full">
-            {/* New Chat Button */}
-            <div className="flex gap-2">
-                <Button
-                    onClick={handleNewChat}
-                    className="flex-1 justify-start gap-2 shadow-sm bg-background hover:bg-muted/50 text-foreground border border-border/50"
-                    variant="outline"
-                    size="lg"
-                >
-                    <Plus className="w-5 h-5 text-primary" />
-                    <span className="font-medium">New Chat</span>
-                </Button>
-                <Link href="/profile" passHref>
-                    <Button
-                        className="w-12 px-0 shadow-sm bg-background hover:bg-muted/50 text-foreground border border-border/50"
-                        variant="outline"
-                        size="lg"
-                    >
-                        <User className="w-5 h-5 text-muted-foreground" />
-                    </Button>
-                </Link>
-            </div>
+    // Group history by date
+    const groupedHistory = history.reduce((groups, item) => {
+        const group = groups.find(g => g.date === item.date);
+        if (group) {
+            group.items.push(item);
+        } else {
+            groups.push({ date: item.date, items: [item] });
+        }
+        return groups;
+    }, [] as { date: string; items: typeof history }[]);
 
-            <Separator className="bg-border/40" />
+    // Filter history based on search
+    const filteredGroups = searchQuery
+        ? groupedHistory.map(group => ({
+            ...group,
+            items: group.items.filter(item =>
+                item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.preview.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+        })).filter(group => group.items.length > 0)
+        : groupedHistory;
+
+    const SidebarContent = () => (
+        <div className="flex flex-col h-full">
+
+            {/* New Chat Button */}
+            <Button
+                onClick={handleNewChat}
+                className="w-full justify-center gap-2 h-11 rounded-xl bg-foreground text-background hover:bg-foreground/90 font-medium shadow-sm mb-4"
+            >
+                <Plus className="w-4 h-4" />
+                New Chat
+            </Button>
+
+            {/* Search */}
+            <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                    placeholder="Search conversations..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-10 pl-9 pr-9 rounded-xl bg-muted/50 border-0 text-sm placeholder:text-muted-foreground/60"
+                />
+                {searchQuery && (
+                    <button
+                        onClick={() => setSearchQuery("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                )}
+            </div>
 
             {/* History List */}
-            <div className="flex-1 overflow-hidden flex flex-col">
-                <div className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    <History className="w-3.5 h-3.5" />
-                    Recent
-                </div>
-                <ScrollArea className="flex-1 -mx-2 px-2">
-                    <div className="space-y-1 py-1">
-                        {history.map((item) => (
-                            <button
-                                key={item.id}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors text-left group"
-                            >
-                                <MessageSquare className="w-4 h-4 opacity-50 group-hover:opacity-100 transition-opacity" />
-                                <div className="flex-1 overflow-hidden">
-                                    <div className="truncate font-medium text-foreground/90">{item.title}</div>
-                                    <div className="truncate text-xs text-muted-foreground opacity-70">{item.preview}</div>
+            <ScrollArea className="flex-1">
+                <div className="px-0 space-y-4">
+                    {filteredGroups.length === 0 ? (
+                        <div className="text-center py-8">
+                            <MessageSquare className="w-8 h-8 mx-auto mb-2 text-muted-foreground/30" />
+                            <p className="text-xs text-muted-foreground">
+                                {searchQuery ? "No matching conversations" : "No conversations yet"}
+                            </p>
+                        </div>
+                    ) : (
+                        filteredGroups.map((group) => (
+                            <div key={group.date}>
+                                {/* Date Header */}
+                                <div className="flex items-center gap-2 px-2 py-1.5 sticky top-0 bg-background/80 backdrop-blur-sm z-10">
+                                    <Clock className="w-3 h-3 text-muted-foreground" />
+                                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                        {group.date}
+                                    </span>
                                 </div>
-                                <span className="text-[10px] text-muted-foreground/50 whitespace-nowrap ml-1">{item.date}</span>
-                            </button>
-                        ))}
-                    </div>
-                </ScrollArea>
-            </div>
+
+                                {/* Items */}
+                                <div className="space-y-1 mt-1">
+                                    {group.items.map((item) => (
+                                        <div
+                                            key={item.id}
+                                            className="group flex items-center justify-between gap-2 pl-4 pr-2 py-3 rounded-xl hover:bg-accent/50 transition-all duration-200 cursor-pointer"
+                                        >
+                                            <div className="flex-1 min-w-0 pr-2">
+                                                <p className="text-[13px] font-medium truncate text-foreground/80 group-hover:text-foreground transition-colors">
+                                                    {item.title}
+                                                </p>
+                                                <p className="text-[11px] text-muted-foreground/70 truncate group-hover:text-muted-foreground transition-colors mt-0.5">
+                                                    {item.preview}
+                                                </p>
+                                            </div>
+
+                                            {/* Actions Dropdown */}
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <button
+                                                        className="w-7 h-7 rounded-full hover:bg-background/80 flex items-center justify-center text-muted-foreground/0 group-hover:text-muted-foreground transition-all duration-200 flex-shrink-0"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <MoreHorizontal className="w-4 h-4" />
+                                                    </button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-40 p-1">
+                                                    <DropdownMenuItem className="gap-2 text-xs rounded-lg py-2 cursor-pointer">
+                                                        <Edit3 className="w-3.5 h-3.5 opacity-70" />
+                                                        Rename
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem className="gap-2 text-xs text-destructive focus:text-destructive rounded-lg py-2 cursor-pointer">
+                                                        <Trash2 className="w-3.5 h-3.5 opacity-70" />
+                                                        Delete
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                        ))
+                    )}
+                </div>
+            </ScrollArea>
         </div>
     );
 
@@ -92,15 +185,16 @@ export default function ChatPage() {
             <motion.div
                 initial={false}
                 animate={{
-                    width: isSidebarOpen ? 280 : 0,
+                    width: isSidebarOpen ? 300 : 0,
                     opacity: isSidebarOpen ? 1 : 0
                 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className={cn(
-                    "flex-shrink-0 border-r border-border/40 bg-muted/20 hidden md:flex flex-col relative",
-                    "overflow-hidden whitespace-nowrap"
+                    "flex-shrink-0 border-r border-border/40 bg-background hidden md:flex flex-col relative",
+                    "overflow-hidden"
                 )}
             >
-                <div className="p-4 h-full">
+                <div className="p-4 h-full w-[300px]">
                     <SidebarContent />
                 </div>
             </motion.div>
@@ -109,9 +203,9 @@ export default function ChatPage() {
             <div className="flex-1 flex min-w-0">
 
                 {/* Main Chat Area */}
-                <div className="flex-1 flex flex-col min-w-0 bg-background/50 relative">
+                <div className="flex-1 flex flex-col min-w-0 bg-muted/20 relative">
                     {/* Header */}
-                    <div className="h-14 border-b border-border/40 flex items-center justify-between px-4 lg:px-6 bg-background/80 backdrop-blur-sm z-10 sticky top-0">
+                    <div className="h-14 border-b border-border/40 flex items-center justify-between px-4 lg:px-6 bg-background/80 backdrop-blur-xl z-10 sticky top-0">
                         <div className="flex items-center gap-2">
                             {/* Mobile Sidebar Trigger */}
                             <Sheet>
@@ -120,27 +214,26 @@ export default function ChatPage() {
                                         <Menu className="w-5 h-5" />
                                     </Button>
                                 </SheetTrigger>
-                                <SheetContent side="left" className="w-[280px] p-4 pt-10">
+                                <SheetContent side="left" className="w-[300px] p-4 pt-10">
                                     <SidebarContent />
                                 </SheetContent>
                             </Sheet>
 
-                            <div className="flex flex-col">
-                                <h1 className="text-sm font-semibold flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                    Debelu Assistant
-                                </h1>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => toggleSidebar()}
+                                    className="hidden md:flex -ml-2 text-muted-foreground hover:text-foreground"
+                                >
+                                    <Menu className="w-5 h-5" />
+                                </Button>
+                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                <h1 className="text-sm font-semibold">Debelu Assistant</h1>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => toggleSidebar()} className="hidden md:flex text-muted-foreground hover:text-foreground">
-                                <Menu className="w-5 h-5" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                                <MoreHorizontal className="w-5 h-5" />
-                            </Button>
-                        </div>
+
                     </div>
 
                     {/* Messages */}

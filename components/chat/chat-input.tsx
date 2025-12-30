@@ -83,7 +83,7 @@ export function ChatInput({
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 10 }}
-                            className="mb-2 px-4 py-2 bg-primary/10 backdrop-blur-md rounded-2xl border border-primary/20 flex items-center justify-between mx-2"
+                            className="mb-2 px-4 py-2 bg-primary/10 backdrop-blur-md rounded-2xl border border-primary/20 flex items-center justify-between mr-2"
                         >
                             <div className="flex items-center gap-2 overflow-hidden">
                                 <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />

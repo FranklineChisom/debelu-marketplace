@@ -41,13 +41,10 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     // Assistant message - varies by type
     return (
         <div className="flex gap-3 max-w-full">
-            {/* Avatar */}
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                <MessageSquare className="w-4 h-4 text-primary-foreground" />
-            </div>
+
 
             {/* Message Content */}
-            <div className="space-y-3 min-w-0 flex-1">
+            <div className="pl-2 space-y-3 min-w-0 flex-1">
                 {/* Text content */}
                 {content && (
                     <div className="chat-bubble chat-bubble-ai">

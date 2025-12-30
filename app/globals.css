@@ -227,6 +227,29 @@
     background: var(--primary);
     color: var(--primary-foreground);
   }
+
+  /* Global Scrollbar */
+  ::-webkit-scrollbar {
+    width: 7.5px;
+    height: 7.5px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: oklch(0.7 0 0 / 0.5);
+    border-radius: 9999px;
+    border: 1px solid transparent;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.6 0 0 / 0.5);
+    border: 1px solid transparent;
+    background-clip: content-box;
+  }
 }
 
 /* ─────────────────────────────────────────

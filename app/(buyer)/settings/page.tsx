@@ -165,7 +165,7 @@ export default function SettingsPage() {
                     <p className="text-muted-foreground">Manage your profile, checking details, and security preferences.</p>
                 </div>
 
-                <Tabs defaultValue="profile" className="flex flex-col md:flex-row gap-8" onValueChange={setActiveTab}>
+                <Tabs value={activeTab} defaultValue="profile" className="flex flex-col md:flex-row gap-8" onValueChange={setActiveTab}>
 
                     {/* Sidebar Navigation */}
                     <motion.div
@@ -197,7 +197,6 @@ export default function SettingsPage() {
                     {/* Content Area */}
                     <div className="flex-1">
                         <motion.div
-                            key={activeTab}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.3 }}
