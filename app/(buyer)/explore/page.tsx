@@ -1,289 +1,320 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import Link from "next/link";
 import {
-    ArrowLeft,
-    TrendingUp,
-    Flame,
-    Clock,
-    Star,
-    ChevronRight,
-    Sparkles,
-    Zap,
     ArrowUpRight,
+    Sparkles,
+    Search,
+    Filter,
+    ArrowRight,
+    Star,
+    Heart,
+    ShoppingBag,
+    Smartphone,
+    Shirt,
+    Pizza,
+    Book,
+    Home,
+    Dumbbell,
+    Ticket,
+    Package,
+    Wrench,
 } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useState, useRef } from "react";
+
 import { Button } from "@/components/ui/button";
-import { formatNaira } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { formatNaira, cn } from "@/lib/utils";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 import { PRODUCT_CATEGORIES } from "@/lib/constants";
 
-// Mock trending data
-const flashDeals = [
-    { id: "1", name: "Wireless Earbuds Pro", price: 18000, originalPrice: 25000, discount: 28, endsIn: "2h 15m" },
-    { id: "2", name: "USB-C Fast Charger", price: 4500, originalPrice: 6000, discount: 25, endsIn: "5h 30m" },
-    { id: "3", name: "Phone Stand Holder", price: 3500, originalPrice: 5000, discount: 30, endsIn: "8h 45m" },
+// Mock Data for Bento Grid
+const FEATURED_ITEMS = [
+    {
+        id: "1",
+        name: "MacBook Air M2",
+        price: 950000,
+        image: "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?q=80&w=2670&auto=format&fit=crop",
+        category: "Electronics",
+        span: "col-span-12 md:col-span-8 row-span-2",
+        dark: true
+    },
+    {
+        id: "2",
+        name: "Nike Air Jordan",
+        price: 85000,
+        image: "https://images.unsplash.com/photo-1552346154-21d32810aba3?q=80&w=2670&auto=format&fit=crop",
+        category: "Fashion",
+        span: "col-span-6 md:col-span-4 row-span-1",
+        dark: false
+    },
+    {
+        id: "3",
+        name: "Sony XM5",
+        price: 350000,
+        image: "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?q=80&w=2588&auto=format&fit=crop",
+        category: "Audio",
+        span: "col-span-6 md:col-span-4 row-span-1",
+        dark: true
+    },
+    {
+        id: "4",
+        name: "Minimalist Set",
+        price: 45000,
+        image: "https://images.unsplash.com/photo-1493723843671-1d655e66ac1c?q=80&w=2670&auto=format&fit=crop",
+        category: "Lifestyle",
+        span: "col-span-6 md:col-span-4 row-span-2",
+        dark: false
+    },
+    {
+        id: "5",
+        name: "Mechanical Keyboard",
+        price: 120000,
+        image: "https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=2671&auto=format&fit=crop",
+        category: "Tech",
+        span: "col-span-6 md:col-span-4 row-span-1",
+        dark: true
+    },
+    {
+        id: "6",
+        name: "Skincare Bundle",
+        price: 25000,
+        image: "https://images.unsplash.com/photo-1556228720-1917387cc833?q=80&w=2669&auto=format&fit=crop",
+        category: "Beauty",
+        span: "col-span-12 md:col-span-4 row-span-1",
+        dark: false
+    }
 ];
 
-const newArrivals = [
-    { id: "3", name: "MacBook Air M2 Case", price: 8500, vendorName: "TechHub NG" },
-    { id: "4", name: "Study Lamp LED", price: 12000, vendorName: "HomeGoods" },
-    { id: "5", name: "Portable Speaker", price: 15000, vendorName: "SoundWave" },
-    { id: "6", name: "USB Hub 4-Port", price: 5500, vendorName: "Gadgets NG" },
-];
-
-const topRated = [
-    { id: "1", name: "Dell Inspiron 15", price: 165000, rating: 4.9, reviews: 45 },
-    { id: "6", name: "JBL Flip 5", price: 35000, rating: 4.8, reviews: 32 },
-    { id: "7", name: "Anker PowerBank 20K", price: 22000, rating: 4.8, reviews: 28 },
-];
+const FILTERS = ["All", "Trending", "For You", "New Arrivals", "Deals"];
 
 export default function ExplorePage() {
     const router = useRouter();
+    const containerRef = useRef(null);
+    const { scrollYProgress } = useScroll({ container: containerRef });
+    const [activeFilter, setActiveFilter] = useState("All");
+    const [showAllCategories, setShowAllCategories] = useState(false);
+
+    const headerOpacity = useTransform(scrollYProgress, [0, 0.1], [0, 1]);
+
+    // Icon mapping for categories
+    const CategoryIcons: Record<string, any> = {
+        electronics: Smartphone,
+        fashion: Shirt,
+        food: Pizza, // or Utensils
+        books: Book,
+        beauty: Sparkles,
+        home: Home,
+        sports: Dumbbell,
+        services: Wrench,
+        tickets: Ticket,
+        other: Package
+    };
 
     return (
-        <div className="flex-1 overflow-y-auto scrollbar-thin">
-            {/* Header */}
-            <header className="h-14 lg:h-16 flex items-center justify-between px-6 lg:px-12 border-b border-foreground/10 sticky top-0 z-30 bg-background">
-                <button
-                    onClick={() => router.back()}
-                    className="lg:hidden w-10 h-10 flex items-center justify-center rounded-full hover:bg-foreground/5 transition-colors"
-                >
-                    <ArrowLeft className="w-5 h-5" />
-                </button>
-                <h1 className="text-lg lg:text-xl font-black tracking-tight">EXPLORE</h1>
-                <div className="w-10 lg:w-0" />
-            </header>
+        <div ref={containerRef} className="h-full overflow-y-auto bg-background scrollbar-hide relative">
 
-            <motion.div
-                variants={staggerContainer}
-                initial="initial"
-                animate="animate"
-                className="px-6 lg:px-12 xl:px-20 py-12 lg:py-24 space-y-24 lg:space-y-32"
+            {/* Sticky Header */}
+            <motion.header
+                style={{ opacity: headerOpacity }}
+                className="fixed top-0 inset-x-0 h-16 bg-background/80 backdrop-blur-xl border-b border-border/40 z-40 flex items-center justify-between px-4 lg:px-8 pointer-events-none data-[visible=true]:pointer-events-auto"
             >
-                {/* Categories - Desktop Grid */}
-                <motion.section variants={fadeInUp}>
-                    <div className="flex items-end justify-between mb-6 lg:mb-8">
-                        <div>
-                            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">Browse</p>
-                            <h2 className="text-2xl lg:text-4xl font-black tracking-tight">Categories</h2>
-                        </div>
-                        <Link href="/search" className="hidden lg:flex items-center gap-2 text-sm font-medium hover:gap-3 transition-all">
-                            View All <ArrowUpRight className="w-4 h-4" />
-                        </Link>
-                    </div>
+                <span className="font-display font-bold text-lg">Explore</span>
+                <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" className="rounded-full">
+                        <Search className="w-5 h-5" />
+                    </Button>
+                </div>
+            </motion.header>
 
-                    {/* Desktop: Large Grid */}
-                    <div className="hidden lg:grid lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                        {PRODUCT_CATEGORIES.slice(0, 12).map((category, index) => (
-                            <motion.div
-                                key={category.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.05 }}
-                            >
-                                <Link
-                                    href={`/search?category=${category.id}`}
-                                    className="group flex flex-col items-center gap-3 p-6 rounded-2xl border border-foreground/10 hover:border-foreground/30 hover:bg-foreground/5 transition-all"
-                                >
-                                    <span className="text-4xl group-hover:scale-110 transition-transform">
-                                        {category.emoji}
-                                    </span>
-                                    <span className="text-sm font-medium text-center">
-                                        {category.name}
-                                    </span>
-                                </Link>
-                            </motion.div>
-                        ))}
-                    </div>
+            <div className="min-h-full pb-20">
 
-                    {/* Mobile: Horizontal Scroll */}
-                    <div className="lg:hidden flex gap-3 overflow-x-auto scrollbar-hide -mx-6 px-6 pb-2">
-                        {PRODUCT_CATEGORIES.slice(0, 10).map((category) => (
-                            <Link
-                                key={category.id}
-                                href={`/search?category=${category.id}`}
-                                className="flex-shrink-0 flex flex-col items-center gap-2 p-4 w-20 rounded-xl hover:bg-foreground/5 transition-colors"
-                            >
-                                <span className="text-2xl">{category.emoji}</span>
-                                <span className="text-[10px] text-center font-medium text-muted-foreground line-clamp-1">
-                                    {category.name}
+                {/* Hero Section */}
+                <motion.div
+                    // Removed opacity fade to prevent disappearing content
+                    className="pt-20 pb-8 px-4 lg:px-12 max-w-7xl mx-auto"
+                >
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+                        <motion.div variants={staggerContainer} initial="initial" animate="animate">
+                            <motion.p variants={fadeInUp} className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                                Curated for you
+                            </motion.p>
+                            <motion.h1 variants={fadeInUp} className="text-4xl md:text-6xl lg:text-7xl font-display font-black tracking-tight leading-[0.9]">
+                                Discover <br />
+                                <span className="text-transparent bg-clip-text bg-gradient-to-br from-foreground to-foreground/50">
+                                    Extraordinary.
                                 </span>
-                            </Link>
-                        ))}
-                    </div>
-                </motion.section>
+                            </motion.h1>
+                        </motion.div>
 
-                {/* Flash Deals */}
-                <motion.section variants={fadeInUp}>
-                    <div className="flex items-end justify-between mb-6 lg:mb-8">
-                        <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <Flame className="w-5 h-5 text-orange-500" />
-                                <span className="text-xs uppercase tracking-[0.2em] text-orange-500 font-bold">Hot</span>
+                        <motion.div
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.4 }}
+                            className="flex gap-2"
+                        >
+                            <Button size="lg" className="rounded-full h-12 px-6 text-base" onClick={() => router.push('/search')}>
+                                <Search className="w-4 h-4 mr-2" />
+                                Search Market
+                            </Button>
+                        </motion.div>
+                    </div>
+
+                    {/* Filter Bar */}
+                    <div className="mb-10">
+                        <ScrollArea className="w-full whitespace-nowrap pb-4">
+                            <div className="flex gap-2">
+                                {FILTERS.map((filter, i) => (
+                                    <button
+                                        key={filter}
+                                        onClick={() => setActiveFilter(filter)}
+                                        className={cn(
+                                            "px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300",
+                                            activeFilter === filter
+                                                ? "bg-foreground text-background shadow-lg scale-105"
+                                                : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                        )}
+                                    >
+                                        {filter}
+                                    </button>
+                                ))}
+                                <div className="w-px h-6 bg-border mx-2 self-center" />
+                                <button className="px-4 py-2.5 rounded-full text-sm font-medium bg-muted/30 text-muted-foreground hover:bg-muted transition-colors flex items-center gap-2">
+                                    <Filter className="w-4 h-4" />
+                                    Filter
+                                </button>
                             </div>
-                            <h2 className="text-2xl lg:text-4xl font-black tracking-tight">Flash Deals</h2>
-                        </div>
-                        <Badge className="bg-orange-500 text-white border-0 animate-pulse">
-                            <Zap className="w-3 h-3 mr-1" />
-                            Limited
-                        </Badge>
+                            <ScrollBar orientation="horizontal" className="invisible" />
+                        </ScrollArea>
                     </div>
 
-                    {/* Desktop: Large Cards Grid */}
-                    <div className="hidden lg:grid lg:grid-cols-3 xl:grid-cols-4 gap-8 xl:gap-10">
-                        {flashDeals.map((deal, index) => (
+                    {/* Bento Grid */}
+                    <div className="grid grid-cols-12 gap-4 auto-rows-[250px]">
+                        {FEATURED_ITEMS.map((item, i) => (
                             <motion.div
-                                key={deal.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.1 }}
+                                key={item.id}
+                                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                                viewport={{ once: true, margin: "-50px" }}
+                                transition={{ duration: 0.5, delay: i * 0.1 }}
+                                className={cn(
+                                    "group relative rounded-3xl overflow-hidden cursor-pointer bg-muted transition-all duration-500 hover:shadow-2xl hover:shadow-primary/5",
+                                    item.span
+                                )}
+                                onClick={() => router.push(`/product/${item.id}`)}
                             >
-                                <Link href={`/product/${deal.id}`}>
-                                    <Card className="group overflow-hidden border-foreground/10 hover:border-foreground/30 transition-all">
-                                        <CardContent className="p-0">
-                                            <div className="aspect-[4/3] bg-foreground/5 flex items-center justify-center relative">
-                                                <span className="text-sm text-muted-foreground">No image</span>
-                                                <span className="absolute top-4 left-4 px-3 py-1 bg-orange-500 text-white text-xs font-bold rounded-full">
-                                                    -{deal.discount}%
-                                                </span>
-                                            </div>
-                                            <div className="p-5">
-                                                <p className="font-bold text-lg mb-2 group-hover:text-emerald-400 transition-colors">
-                                                    {deal.name}
-                                                </p>
-                                                <div className="flex items-baseline gap-3 mb-3">
-                                                    <span className="text-2xl font-black">{formatNaira(deal.price)}</span>
-                                                    <span className="text-sm text-muted-foreground line-through">
-                                                        {formatNaira(deal.originalPrice)}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                    <Clock className="w-3 h-3" />
-                                                    Ends in {deal.endsIn}
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </Link>
-                            </motion.div>
-                        ))}
-                    </div>
+                                {/* Image Background */}
+                                <Image
+                                    src={item.image}
+                                    alt={item.name}
+                                    fill
+                                    className="object-cover transition-transform duration-700 group-hover:scale-110"
+                                />
 
-                    {/* Mobile: Horizontal Scroll */}
-                    <div className="lg:hidden flex gap-4 overflow-x-auto scrollbar-hide -mx-6 px-6 pb-2">
-                        {flashDeals.map((deal) => (
-                            <Link key={deal.id} href={`/product/${deal.id}`}>
-                                <Card className="w-44 flex-shrink-0 border-foreground/10">
-                                    <CardContent className="p-0">
-                                        <div className="aspect-square bg-foreground/5 flex items-center justify-center relative">
-                                            <span className="text-xs text-muted-foreground">No img</span>
-                                            <span className="absolute top-2 left-2 px-2 py-0.5 bg-orange-500 text-white text-[10px] font-bold rounded-full">
-                                                -{deal.discount}%
-                                            </span>
+                                {/* Overlay Gradient */}
+                                <div className={cn(
+                                    "absolute inset-0 transition-opacity duration-300",
+                                    item.dark
+                                        ? "bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-70" :
+                                        "bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-30 group-hover:opacity-40"
+                                )} />
+
+                                {/* Content */}
+                                <div className="absolute inset-x-0 bottom-0 p-6 flex flex-col justify-end">
+                                    <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <Badge variant="secondary" className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-md border-none">
+                                                {item.category}
+                                            </Badge>
+                                            <Button
+                                                size="icon"
+                                                variant="secondary"
+                                                className="w-8 h-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/20 hover:bg-white/40 text-white backdrop-blur-md border-none"
+                                            >
+                                                <Heart className="w-4 h-4" />
+                                            </Button>
                                         </div>
-                                        <div className="p-3">
-                                            <p className="text-sm font-bold line-clamp-1">{deal.name}</p>
-                                            <div className="flex items-baseline gap-2 mt-1">
-                                                <span className="font-black">{formatNaira(deal.price)}</span>
-                                            </div>
+                                        <h3 className="text-2xl font-bold text-white mb-1 leading-tight">{item.name}</h3>
+                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75 text-white/90">
+                                            <span className="font-semibold">{formatNaira(item.price)}</span>
+                                            <ArrowRight className="w-4 h-4" />
                                         </div>
-                                    </CardContent>
-                                </Card>
-                            </Link>
-                        ))}
-                    </div>
-                </motion.section>
-
-                {/* Top Rated - Minimal List */}
-                <motion.section variants={fadeInUp}>
-                    <div className="flex items-end justify-between mb-6 lg:mb-8">
-                        <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                                <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Best</span>
-                            </div>
-                            <h2 className="text-2xl lg:text-4xl font-black tracking-tight">Top Rated</h2>
-                        </div>
-                        <Link href="/search?sort=rating" className="hidden lg:flex items-center gap-2 text-sm font-medium hover:gap-3 transition-all">
-                            View All <ArrowUpRight className="w-4 h-4" />
-                        </Link>
-                    </div>
-
-                    <div className="space-y-2">
-                        {topRated.map((product, index) => (
-                            <motion.div
-                                key={product.id}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                            >
-                                <Link href={`/product/${product.id}`}>
-                                    <div className="group flex items-center gap-4 lg:gap-6 p-4 lg:p-6 rounded-xl lg:rounded-2xl border border-foreground/10 hover:border-foreground/30 hover:bg-foreground/5 transition-all">
-                                        {/* Rank */}
-                                        <span className="text-4xl lg:text-6xl font-black text-foreground/10 group-hover:text-emerald-400/30 transition-colors w-12 lg:w-16">
-                                            {index + 1}
-                                        </span>
-
-                                        {/* Image */}
-                                        <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-xl bg-foreground/5 flex items-center justify-center flex-shrink-0">
-                                            <span className="text-xs text-muted-foreground">No img</span>
-                                        </div>
-
-                                        {/* Info */}
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-bold text-lg lg:text-xl line-clamp-1 group-hover:text-emerald-400 transition-colors">
-                                                {product.name}
-                                            </p>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                                                <span className="font-bold">{product.rating}</span>
-                                                <span className="text-sm text-muted-foreground">({product.reviews})</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Price */}
-                                        <span className="text-xl lg:text-2xl font-black hidden sm:block">
-                                            {formatNaira(product.price)}
-                                        </span>
-
-                                        <ArrowUpRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground group-hover:rotate-45 transition-all" />
                                     </div>
-                                </Link>
+                                </div>
                             </motion.div>
                         ))}
                     </div>
-                </motion.section>
+                </motion.div>
 
-                {/* AI CTA */}
-                <motion.section variants={fadeInUp}>
-                    <Link href="/chat">
-                        <div className="relative p-8 lg:p-12 xl:p-16 rounded-2xl lg:rounded-3xl bg-foreground text-background overflow-hidden group cursor-pointer">
-                            {/* Gradient accent */}
-                            <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-emerald-400/20 to-transparent" />
-
-                            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                                <div>
-                                    <p className="text-xs uppercase tracking-[0.3em] text-background/50 mb-3">AI Powered</p>
-                                    <h3 className="text-2xl lg:text-4xl font-black tracking-tight mb-2">
-                                        Can't find what you need?
-                                    </h3>
-                                    <p className="text-background/60 lg:text-lg">
-                                        Just tell our AI what you're looking for
-                                    </p>
-                                </div>
-                                <Button size="xl" className="bg-background text-foreground hover:bg-background/90 rounded-full px-8 group-hover:scale-105 transition-transform">
-                                    <Sparkles className="w-5 h-5 mr-2" />
-                                    Chat with AI
-                                </Button>
-                            </div>
+                {/* Categories Strip */}
+                <div className="py-12 border-t border-border/40">
+                    <div className="px-4 lg:px-12 max-w-7xl mx-auto">
+                        <div className="flex items-center justify-between mb-8">
+                            <h2 className="text-2xl font-bold tracking-tight">Browse by Category</h2>
+                            <button
+                                onClick={() => setShowAllCategories(!showAllCategories)}
+                                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+                            >
+                                {showAllCategories ? "Show Less" : "View All"} <ArrowRight className={cn("w-4 h-4 transition-transform", showAllCategories && "rotate-90")} />
+                            </button>
                         </div>
-                    </Link>
-                </motion.section>
-            </motion.div>
+
+                        <motion.div
+                            layout
+                            className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"
+                        >
+                            {PRODUCT_CATEGORIES.slice(0, showAllCategories ? undefined : 6).map((cat, i) => {
+                                const Icon = CategoryIcons[cat.id] || Sparkles;
+                                return (
+                                    <Link
+                                        key={cat.id}
+                                        href={`/search?category=${cat.id}`}
+                                        className="group flex flex-col items-center justify-center gap-4 p-8 rounded-2xl bg-muted/30 border border-border/50 hover:border-primary/50 hover:bg-background transition-all duration-300 hover:shadow-lg"
+                                    >
+                                        <div className="w-12 h-12 rounded-full bg-background flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-300">
+                                            <Icon className="w-6 h-6 text-foreground/80 group-hover:text-primary transition-colors" />
+                                        </div>
+                                        <span className="font-medium text-sm text-center">{cat.name}</span>
+                                    </Link>
+                                );
+                            })}
+                        </motion.div>
+                    </div>
+                </div>
+
+                {/* AI Assistant CTA */}
+                <div className="px-4 lg:px-12 max-w-7xl mx-auto mb-20">
+                    <div className="relative rounded-3xl overflow-hidden bg-foreground text-background p-8 md:p-12 lg:p-16">
+                        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/20 blur-[120px] rounded-full pointer-events-none -translate-y-1/2 translate-x-1/2" />
+
+                        <div className="relative z-10 max-w-xl">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-background/10 text-background/80 text-xs font-medium mb-6">
+                                <Sparkles className="w-3 h-3" />
+                                AI Powered
+                            </div>
+                            <h2 className="text-3xl md:text-5xl font-display font-bold mb-6 leading-tight">
+                                Can't find exactly <br /> what you need?
+                            </h2>
+                            <p className="text-lg text-background/70 mb-8 max-w-md">
+                                Let Debelu AI help you find the perfect item, compare prices, or track down a specific vendor on campus.
+                            </p>
+                            <Button
+                                size="lg"
+                                className="h-14 px-8 rounded-full bg-background text-foreground hover:bg-background/90 font-semibold text-lg"
+                                onClick={() => router.push('/chat')}
+                            >
+                                Chat with AI
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </div>
     );
 }

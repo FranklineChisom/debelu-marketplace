@@ -1,223 +1,232 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Package, ChevronRight, Clock, CheckCircle, Truck, AlertCircle, Search, Filter } from "lucide-react";
+import {
+    Package,
+    Truck,
+    CheckCircle,
+    Clock,
+    ChevronRight,
+    Search,
+    ShoppingBag,
+    XCircle,
+    MapPin,
+    ArrowRight
+} from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { formatNaira, formatRelativeTime } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatNaira, cn } from "@/lib/utils";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
-import { ORDER_STATUSES } from "@/lib/constants";
 
-// Mock orders data with more detail for the timeline
-const mockOrders = [
+// Mock Orders Data
+const ORDERS = [
     {
-        id: "1",
-        orderNumber: "DBL-ABC123",
-        status: "delivered" as const,
-        total: 177500,
-        itemCount: 2,
-        firstItemName: "Dell Inspiron 15",
-        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        timeline: [
-            { status: "placed", date: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString() },
-            { status: "processing", date: new Date(Date.now() - 40 * 60 * 60 * 1000).toISOString() },
-            { status: "shipped", date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() },
-            { status: "delivered", date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() },
-        ]
-    },
-    {
-        id: "2",
-        orderNumber: "DBL-XYZ789",
-        status: "delivering" as const,
-        total: 45000,
-        itemCount: 1,
-        firstItemName: "iPhone 12 Case Bundle",
-        createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-        timeline: [
-            { status: "placed", date: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString() },
-            { status: "processing", date: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString() },
-            { status: "shipped", date: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString() }
-        ]
-    },
-    {
-        id: "3",
-        orderNumber: "DBL-DEF456",
-        status: "pending" as const,
+        id: "ORD-2458-9923",
+        date: "Today, 10:30 AM",
+        status: "shipping",
         total: 12500,
-        itemCount: 3,
-        firstItemName: "USB-C Hub",
-        createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-        timeline: [
-            { status: "placed", date: new Date(Date.now() - 30 * 60 * 1000).toISOString() }
-        ]
+        items: [
+            { name: "Nike Air Max 90", image: "https://images.unsplash.com/photo-1552346154-21d32810aba3?q=80&w=2670&auto=format&fit=crop" },
+            { name: "Running Socks (3pk)", image: "https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?q=80&w=2572&auto=format&fit=crop" }
+        ],
+        vendor: "Campus Kicks",
+        deliveryTime: "Arriving by 2:00 PM"
     },
+    {
+        id: "ORD-9928-1122",
+        date: "Yesterday",
+        status: "processing",
+        total: 4500,
+        items: [
+            { name: "Reading Lamp LED", image: "https://images.unsplash.com/photo-1534073828943-f801091a7499?q=80&w=2574&auto=format&fit=crop" }
+        ],
+        vendor: "Gadget Hub",
+        deliveryTime: "Processing order"
+    },
+    {
+        id: "ORD-1102-3344",
+        date: "Dec 24, 2024",
+        status: "delivered",
+        total: 78000,
+        items: [
+            { name: "Mechanical Keyboard", image: "https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=2671&auto=format&fit=crop" },
+            { name: "Desk Mat", image: "https://images.unsplash.com/photo-1629905678767-f7035ce46112?q=80&w=2670&auto=format&fit=crop" }
+        ],
+        vendor: "Tech Haven",
+        deliveryTime: "Delivered to Hostel A"
+    },
+    {
+        id: "ORD-5544-2211",
+        date: "Dec 12, 2024",
+        status: "cancelled",
+        total: 15000,
+        items: [
+            { name: "Textbooks Bundle", image: "https://images.unsplash.com/photo-1491841550275-ad7854e35ca6?q=80&w=2574&auto=format&fit=crop" }
+        ],
+        vendor: "Book Worms",
+        deliveryTime: "Cancelled by you"
+    }
 ];
 
-const getStatusIcon = (status: string) => {
-    switch (status) {
-        case "delivered": return <CheckCircle className="w-4 h-4 text-emerald-500" />;
-        case "delivering": return <Truck className="w-4 h-4 text-blue-500" />;
-        case "processing": return <Package className="w-4 h-4 text-orange-500" />;
-        case "pending": return <Clock className="w-4 h-4 text-yellow-500" />;
-        case "cancelled": return <AlertCircle className="w-4 h-4 text-red-500" />;
-        default: return <Clock className="w-4 h-4" />;
-    }
-}
+const STATUS_CONFIG = {
+    pending: { label: "Pending", icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+    processing: { label: "Processing", icon: Package, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+    shipping: { label: "On the way", icon: Truck, color: "text-purple-500", bg: "bg-purple-500/10", border: "border-purple-500/20" },
+    delivered: { label: "Delivered", icon: CheckCircle, color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+    cancelled: { label: "Cancelled", icon: XCircle, color: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/20" },
+};
 
 export default function OrdersPage() {
-    const hasOrders = mockOrders.length > 0;
+    const [activeTab, setActiveTab] = useState("all");
+    const [searchQuery, setSearchQuery] = useState("");
+
+    const filteredOrders = ORDERS.filter(order => {
+        const matchesSearch = order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            order.vendor.toLowerCase().includes(searchQuery.toLowerCase());
+
+        if (activeTab === "all") return matchesSearch;
+        if (activeTab === "active") return matchesSearch && ["pending", "processing", "shipping"].includes(order.status);
+        if (activeTab === "completed") return matchesSearch && order.status === "delivered";
+        if (activeTab === "cancelled") return matchesSearch && order.status === "cancelled";
+        return matchesSearch;
+    });
 
     return (
-        <div className="flex-1 overflow-y-auto scrollbar-thin bg-background/50">
-            <div className="max-w-4xl mx-auto p-4 lg:p-8 space-y-8">
+        <div className="flex-1 overflow-y-auto bg-background/50">
+            <div className="max-w-4xl mx-auto px-4 lg:px-8 py-8 lg:py-12">
 
-                {/* Header Section */}
-                <motion.div variants={fadeInUp} initial="initial" animate="animate" className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
                     <div>
-                        <h1 className="font-display text-3xl font-black tracking-tight text-foreground">
-                            Your Orders
-                        </h1>
-                        <p className="text-muted-foreground mt-1">
-                            Track the status of your recent purchases
-                        </p>
+                        <h1 className="text-3xl font-display font-bold tracking-tight mb-2">My Orders</h1>
+                        <p className="text-muted-foreground">Track and manage your purchases</p>
                     </div>
-                    {/* Search/Filter (Visual Only) */}
-                    <div className="flex items-center gap-2">
-                        <div className="relative group">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                            <Input
-                                placeholder="Search order ID..."
-                                className="pl-9 w-full md:w-64 bg-background/50 backdrop-blur-sm border-border/50 focus:border-primary/50 transition-all rounded-xl"
-                            />
-                        </div>
-                        <Button variant="outline" size="icon" className="rounded-xl border-border/50">
-                            <Filter className="w-4 h-4 text-muted-foreground" />
-                        </Button>
+                    <div className="relative w-full md:w-80">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search by Order ID or Vendor..."
+                            className="pl-10 h-11 bg-background border-border/60 focus:border-primary/50 transition-colors rounded-xl"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
                     </div>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    variants={staggerContainer}
-                    initial="initial"
-                    animate="animate"
-                    className="space-y-4"
-                >
-                    {!hasOrders ? (
-                        // Premium Empty State
-                        <motion.div variants={fadeInUp} className="flex flex-col items-center justify-center py-24 text-center">
-                            <div className="w-24 h-24 mb-6 rounded-3xl bg-gradient-to-tr from-muted to-muted/30 flex items-center justify-center relative overflow-hidden group">
-                                <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/20 to-transparent group-hover:opacity-100 opacity-0 transition-opacity duration-500" />
-                                <Package className="w-10 h-10 text-muted-foreground group-hover:scale-110 transition-transform duration-500" />
-                            </div>
-                            <h2 className="font-display text-xl font-bold mb-2">No orders placed yet</h2>
-                            <p className="text-muted-foreground mb-6 max-w-sm">
-                                Looks like you haven't bought anything yet. Explore our collections to find something you'll love.
-                            </p>
-                            <Link href="/explore">
-                                <Button size="lg" className="rounded-full font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40">
-                                    Start Exploring
-                                    <ChevronRight className="w-4 h-4 ml-2" />
-                                </Button>
-                            </Link>
-                        </motion.div>
-                    ) : (
-                        // Premium Orders List
-                        <div className="grid gap-4">
-                            {mockOrders.map((order) => {
-                                const status = ORDER_STATUSES[order.status];
-                                const isDelivered = order.status === "delivered";
+                {/* Tabs & Content */}
+                <Tabs defaultValue="all" className="space-y-8" onValueChange={setActiveTab}>
+                    <TabsList className="bg-muted/50 p-1 rounded-full inline-flex md:w-auto overflow-x-auto max-w-full">
+                        <TabsTrigger value="all" className="rounded-full px-6 data-[state=active]:bg-background data-[state=active]:shadow-sm">All</TabsTrigger>
+                        <TabsTrigger value="active" className="rounded-full px-6 data-[state=active]:bg-background data-[state=active]:shadow-sm">Active</TabsTrigger>
+                        <TabsTrigger value="completed" className="rounded-full px-6 data-[state=active]:bg-background data-[state=active]:shadow-sm">Completed</TabsTrigger>
+                        <TabsTrigger value="cancelled" className="rounded-full px-6 data-[state=active]:bg-background data-[state=active]:shadow-sm">Cancelled</TabsTrigger>
+                    </TabsList>
+
+                    <motion.div
+                        variants={staggerContainer}
+                        initial="initial"
+                        animate="animate"
+                        className="space-y-4"
+                    >
+                        {filteredOrders.length > 0 ? (
+                            filteredOrders.map((order) => {
+                                const status = STATUS_CONFIG[order.status as keyof typeof STATUS_CONFIG];
+                                const StatusIcon = status.icon;
 
                                 return (
                                     <motion.div
                                         key={order.id}
                                         variants={fadeInUp}
-                                        whileHover={{ y: -2 }}
-                                        className="group relative bg-card/50 backdrop-blur-sm border border-border/50 rounded-3xl p-6 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 overflow-hidden"
+                                        className="group bg-background border border-border/50 rounded-2xl overflow-hidden hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
                                     >
-                                        {/* Gradient Hover Effect */}
-                                        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-
-                                        <Link href={`/orders/${order.id}`} className="relative z-10 block space-y-6">
-
-                                            {/* Top Row: Order ID & Status */}
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="p-3 rounded-2xl bg-background border border-border/50 shadow-sm">
-                                                        <Package className="w-6 h-6 text-primary" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex items-center gap-2">
-                                                            <h3 className="font-bold text-lg tracking-tight">#{order.orderNumber}</h3>
-                                                            <Badge
-                                                                className={`rounded-full px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider border-0 ${isDelivered ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'
-                                                                    }`}
-                                                            >
-                                                                {status.label}
-                                                            </Badge>
+                                        <Link href={`/orders/${order.id}`} className="block">
+                                            <div className="p-5 md:p-6">
+                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", status.bg)}>
+                                                            <StatusIcon className={cn("w-5 h-5", status.color)} />
                                                         </div>
-                                                        <p className="text-xs text-muted-foreground font-medium mt-0.5">
-                                                            Placed {formatRelativeTime(order.createdAt)}
-                                                        </p>
+                                                        <div>
+                                                            <div className="flex items-center gap-2 mb-0.5">
+                                                                <h3 className="font-semibold">{order.vendor}</h3>
+                                                                <span className="text-xs text-muted-foreground">• {order.date}</span>
+                                                            </div>
+                                                            <div className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border", status.bg, status.color, status.border)}>
+                                                                {status.label}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="block font-bold text-lg">{formatNaira(order.total)}</span>
+                                                        <span className="text-xs text-muted-foreground font-medium">{order.items.length} items</span>
                                                     </div>
                                                 </div>
-                                                <div className="text-right">
-                                                    <p className="text-sm text-muted-foreground font-medium mb-1">Total Amount</p>
-                                                    <p className="text-xl font-black bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                                                        {formatNaira(order.total)}
-                                                    </p>
-                                                </div>
-                                            </div>
 
-                                            {/* Middle Row: Items Preview & Timeline Visual */}
-                                            <div className="flex flex-col md:flex-row gap-6 md:items-center justify-between py-4 border-t border-border/50 border-b border-border/50 border-dashed">
-                                                <div>
-                                                    <p className="text-sm font-semibold text-foreground">
-                                                        {order.firstItemName}
-                                                    </p>
-                                                    {order.itemCount > 1 && (
-                                                        <p className="text-xs text-muted-foreground mt-1">
-                                                            + {order.itemCount - 1} other items
-                                                        </p>
-                                                    )}
-                                                </div>
-
-                                                {/* Mini Timeline (Visual Indicator) */}
-                                                <div className="flex items-center gap-2 bg-muted/30 px-4 py-2 rounded-full border border-border/50">
-                                                    {getStatusIcon(order.status)}
-                                                    <div className="h-1 w-12 bg-muted rounded-full overflow-hidden">
-                                                        <div
-                                                            className={`h-full rounded-full ${isDelivered ? 'bg-emerald-500 w-full' : 'bg-blue-500 w-2/3 animate-pulse'}`}
-                                                        />
+                                                <div className="flex items-center gap-4 py-4 border-t border-border/40">
+                                                    <div className="flex -space-x-3 overflow-hidden">
+                                                        {order.items.slice(0, 3).map((item, i) => (
+                                                            <div key={i} className="relative w-12 h-12 rounded-lg border-2 border-background overflow-hidden bg-muted">
+                                                                <Image
+                                                                    src={item.image}
+                                                                    alt={item.name}
+                                                                    fill
+                                                                    className="object-cover"
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                        {order.items.length > 3 && (
+                                                            <div className="w-12 h-12 rounded-lg border-2 border-background bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground">
+                                                                +{order.items.length - 3}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    <span className="text-xs font-bold text-muted-foreground uppercase">
-                                                        {status.label}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* Bottom Row: Actions */}
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex -space-x-2">
-                                                    {/* Avatar pile for items if we had images */}
-                                                    <div className="w-8 h-8 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[10px] font-bold">
-                                                        {order.firstItemName[0]}
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium line-clamp-1">{order.items[0].name}</p>
+                                                        {order.items.length > 1 && (
+                                                            <p className="text-xs text-muted-foreground">and {order.items.length - 1} other item(s)</p>
+                                                        )}
                                                     </div>
+                                                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                                                 </div>
-                                                <div className="flex items-center gap-2 text-sm font-bold text-primary group-hover:translate-x-1 transition-transform">
-                                                    View Details
-                                                    <ChevronRight className="w-4 h-4" />
-                                                </div>
-                                            </div>
 
+                                                {/* Delivery Footnote for Active Orders */}
+                                                {["processing", "shipping"].includes(order.status) && (
+                                                    <div className="mt-2 bg-muted/30 -mx-6 -mb-6 px-6 py-3 flex items-center gap-2 text-xs font-medium text-foreground/80">
+                                                        <Truck className="w-3.5 h-3.5 text-primary" />
+                                                        {order.deliveryTime}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </Link>
                                     </motion.div>
                                 );
-                            })}
-                        </div>
-                    )}
-                </motion.div>
+                            })
+                        ) : (
+                            <motion.div
+                                variants={fadeInUp}
+                                className="text-center py-20"
+                            >
+                                <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <ShoppingBag className="w-10 h-10 text-muted-foreground/50" />
+                                </div>
+                                <h3 className="text-xl font-bold mb-2">No orders found</h3>
+                                <p className="text-muted-foreground mb-8">
+                                    {activeTab === 'all'
+                                        ? "You haven't placed any orders yet."
+                                        : `You don't have any ${activeTab} orders.`}
+                                </p>
+                                <Button size="lg" className="rounded-full" asChild>
+                                    <Link href="/explore">Start Shopping</Link>
+                                </Button>
+                            </motion.div>
+                        )}
+                    </motion.div>
+                </Tabs>
             </div>
         </div>
     );
