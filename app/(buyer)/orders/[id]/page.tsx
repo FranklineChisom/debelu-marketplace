@@ -14,6 +14,7 @@ import {
     Truck,
     Store,
     Copy,
+    Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -110,23 +111,45 @@ const mockOrders = [
     },
 ];
 
-const statusConfig = {
-    pending: { label: "Pending", icon: Clock, color: "warning" },
-    confirmed: { label: "Confirmed", icon: CheckCircle, color: "info" },
-    processing: { label: "Preparing", icon: Package, color: "info" },
-    delivering: { label: "On the way", icon: Truck, color: "primary" },
-    delivered: { label: "Delivered", icon: CheckCircle, color: "success" },
-    cancelled: { label: "Cancelled", icon: Clock, color: "destructive" },
-};
+import { useMarketplaceStore } from "@/stores/useMarketplaceStore";
+import { OrderStatus } from "@/lib/constants";
 
-const statusOrder = ["pending", "confirmed", "processing", "delivering", "delivered"];
+const STATUS_ORDER: OrderStatus[] = ["pending", "confirmed", "processing", "delivering", "delivered"];
+
+const STATUS_CONFIG: Record<string, { label: string; icon: any; color: string; bg: string; border: string }> = {
+    pending: { label: "Pending", icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+    confirmed: { label: "Confirmed", icon: CheckCircle, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+    processing: { label: "Processing", icon: Package, color: "text-purple-500", bg: "bg-purple-500/10", border: "border-purple-500/20" },
+    ready: { label: "Ready", icon: Package, color: "text-indigo-500", bg: "bg-indigo-500/10", border: "border-indigo-500/20" }, // Added ready
+    delivering: { label: "On the way", icon: Truck, color: "text-indigo-500", bg: "bg-indigo-500/10", border: "border-indigo-500/20" },
+    delivered: { label: "Delivered", icon: CheckCircle, color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+    cancelled: { label: "Cancelled", icon: Clock, color: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/20" },
+    disputed: { label: "Disputed", icon: Shield, color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20" }, // Added disputed
+};
 
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const router = useRouter();
 
-    const order = mockOrders.find((o) => o.id === id) || mockOrders[0];
-    const currentStatusIndex = statusOrder.indexOf(order.status);
+    const orders = useMarketplaceStore((state) => state.orders);
+    const order = orders.find((o) => o.id === id);
+
+    if (!order) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <h2 className="text-xl font-bold">Order not found</h2>
+                    <Button onClick={() => router.push('/orders')} className="mt-4">
+                        Back to Orders
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
+    const currentStatusIndex = STATUS_ORDER.indexOf(order.status as OrderStatus);
+    // Use the status config for the current status or fallback to pending
+    const statusInfo = STATUS_CONFIG[order.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
 
     const handleCopyOrderNumber = () => {
         navigator.clipboard.writeText(order.orderNumber);
@@ -175,7 +198,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                                                 : "default"
                                     }
                                 >
-                                    {statusConfig[order.status].label}
+                                    {statusInfo.label}
                                 </Badge>
                             </div>
 
@@ -189,9 +212,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                                     }}
                                 />
                                 <div className="relative flex justify-between">
-                                    {statusOrder.map((status, i) => {
+                                    {STATUS_ORDER.map((status, i) => {
                                         const isActive = i <= currentStatusIndex;
                                         const isCurrent = status === order.status;
+                                        const config = STATUS_CONFIG[status];
                                         return (
                                             <div key={status} className="flex flex-col items-center">
                                                 <div
@@ -212,7 +236,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                                                             : "text-muted-foreground"
                                                     )}
                                                 >
-                                                    {statusConfig[status as keyof typeof statusConfig].label}
+                                                    {config.label}
                                                 </span>
                                             </div>
                                         );
@@ -231,7 +255,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                             <div>
                                 <p className="font-medium text-sm">Estimated Delivery</p>
                                 <p className="text-xs text-muted-foreground">
-                                    {order.estimatedDelivery}
+                                    {order.deliverySlot?.label ? `Arriving: ${order.deliverySlot.label}` : "Estimated Delivery"}
                                 </p>
                             </div>
                         </div>
@@ -247,19 +271,22 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         <CardContent className="p-0 divide-y">
                             {order.items.map((item, i) => (
                                 <div key={i} className="flex items-center gap-3 p-4">
-                                    <div className="w-14 h-14 rounded-xl bg-muted flex-shrink-0 flex items-center justify-center text-xs text-muted-foreground">
-                                        No img
+                                    <div className="w-14 h-14 rounded-xl bg-muted flex-shrink-0 flex items-center justify-center text-xs text-muted-foreground overflow-hidden relative">
+                                        {/* Fallback image if needed, or use proper Image component */}
+                                        {item.image ? (
+                                            <img src={item.image} alt={item.productName} className="w-full h-full object-cover" />
+                                        ) : "No img"}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="font-medium text-sm line-clamp-1">
-                                            {item.name}
+                                            {item.productName}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            Qty: {item.qty}
+                                            Qty: {item.quantity}
                                         </p>
                                     </div>
                                     <span className="font-semibold text-sm">
-                                        {formatNaira(item.price * item.qty)}
+                                        {formatNaira(item.price * item.quantity)}
                                     </span>
                                 </div>
                             ))}
@@ -274,7 +301,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         <CardContent className="p-4">
                             <div className="flex items-start gap-3">
                                 <MapPin className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                                <p className="text-sm">{order.deliveryAddress}</p>
+                                <p className="text-sm">{order.deliveryAddress?.fullAddress || "No address"}</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -334,7 +361,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                     <Card>
                         <CardContent className="p-4">
                             <div className="space-y-4">
-                                {order.statusHistory.map((entry, i) => (
+                                {order.statusHistory?.map((entry, i) => (
                                     <div key={i} className="flex gap-3">
                                         <div className="relative flex flex-col items-center">
                                             <div
@@ -350,13 +377,16 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                                             )}
                                         </div>
                                         <div className="pb-4">
-                                            <p className="text-sm font-medium">{entry.message}</p>
+                                            <p className="text-sm font-medium">{entry.note || entry.status}</p>
                                             <p className="text-xs text-muted-foreground">
-                                                {entry.time}
+                                                {new Date(entry.timestamp).toLocaleString()}
                                             </p>
                                         </div>
                                     </div>
                                 ))}
+                                {(!order.statusHistory || order.statusHistory.length === 0) && (
+                                    <p className="text-sm text-muted-foreground">No history available.</p>
+                                )}
                             </div>
                         </CardContent>
                     </Card>

@@ -24,6 +24,7 @@ import {
     Edit3,
     MoreVertical,
     GraduationCap,
+    Smartphone,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -31,52 +32,23 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatNaira, generateOrderId } from "@/lib/utils";
 import { useCartStore } from "@/stores";
-import { PAYMENT_METHODS } from "@/lib/constants";
+import { PAYMENT_METHODS, OrderStatus } from "@/lib/constants";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
+import { useMarketplaceStore } from "@/stores/useMarketplaceStore";
+import { Order } from "@/types/order";
+import { toast } from "sonner";
+import { Address } from "@/types/user";
 
 type Step = "address" | "delivery" | "payment" | "confirm";
-type AddressType = "hostel" | "academic" | "other";
-
-interface Address {
-    id: string;
-    label: string;
-    detail: string;
-    fullAddress: string;
-    type: AddressType;
-    isDefault: boolean;
-}
-
-const steps: { id: Step; label: string; icon: React.ComponentType<any> }[] = [
-    { id: "address", label: "Address", icon: MapPin },
-    { id: "delivery", label: "Delivery", icon: Truck },
-    { id: "payment", label: "Payment", icon: CreditCard },
-];
-
-const addressTypeIcons: Record<AddressType, React.ComponentType<any>> = {
-    hostel: Home,
-    academic: GraduationCap,
-    other: Building,
+// Map shared types to icons. Shared: "Home" | "Work" | "Other"
+const addressTypeIcons: Record<string, React.ComponentType<any>> = {
+    Home: Home,
+    Work: GraduationCap, // Work/Academic
+    Other: Building,
 };
 
-const initialAddresses: Address[] = [
-    {
-        id: "1",
-        label: "Moremi Hall",
-        detail: "Room 234",
-        fullAddress: "Moremi Hall, Room 234, University of Lagos, Akoka, Lagos",
-        type: "hostel",
-        isDefault: true,
-    },
-    {
-        id: "2",
-        label: "Engineering Faculty",
-        detail: "Ground Floor",
-        fullAddress: "Faculty of Engineering Building, UNILAG, Akoka",
-        type: "academic",
-        isDefault: false,
-    },
-];
+// Removed initialAddresses, using store now
 
 const deliverySlots = [
     { id: "1", label: "Express", time: "30-45 mins", fee: 500, icon: Zap, recommended: true },
@@ -86,9 +58,19 @@ const deliverySlots = [
 
 export default function CheckoutPage() {
     const router = useRouter();
+
+    // Store
+    const user = useMarketplaceStore((state) => state.user);
+    const placeOrder = useMarketplaceStore((state) => state.placeOrder);
+    const addAddress = useMarketplaceStore((state) => state.addAddress);
+    const updateAddress = useMarketplaceStore((state) => state.updateAddress);
+    const deleteAddress = useMarketplaceStore((state) => state.deleteAddress);
+
+    const addresses = user?.addresses || [];
+
     const [currentStep, setCurrentStep] = useState<Step>("address");
-    const [addresses, setAddresses] = useState<Address[]>(initialAddresses);
-    const [selectedAddress, setSelectedAddress] = useState(addresses[0]?.id || "");
+    // Default to first address or empty
+    const [selectedAddress, setSelectedAddress] = useState(addresses.find(a => a.isDefault)?.id || addresses[0]?.id || "");
     const [selectedSlot, setSelectedSlot] = useState(deliverySlots[0].id);
     const [selectedPayment, setSelectedPayment] = useState("paystack");
     const [promoCode, setPromoCode] = useState("");
@@ -100,11 +82,12 @@ export default function CheckoutPage() {
     // Address modal state
     const [showAddressModal, setShowAddressModal] = useState(false);
     const [editingAddress, setEditingAddress] = useState<Address | null>(null);
-    const [addressForm, setAddressForm] = useState({
+    const [addressForm, setAddressForm] = useState<Partial<Address>>({
         label: "",
-        detail: "",
         fullAddress: "",
-        type: "hostel" as AddressType,
+        type: "Home",
+        phone: user?.profile.phone || "",
+        isDefault: false
     });
 
     const items = useCartStore((state) => state.items);
@@ -149,20 +132,91 @@ export default function CheckoutPage() {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const handlePlaceOrder = async () => {
+    const placeOrder = useMarketplaceStore((state) => state.placeOrder);
+
+    const handlePlaceOrder = () => {
         setIsProcessing(true);
-        await new Promise((r) => setTimeout(r, 2500));
-        const newOrderNumber = generateOrderId();
-        setOrderNumber(newOrderNumber);
-        clearCart();
-        setCurrentStep("confirm");
-        setIsProcessing(false);
+
+        // Create new order object
+        if (!user) {
+            toast.error("Please log in to place an order");
+            return;
+        }
+
+        // Create new order object
+        const newOrder: Order = {
+            id: `order-${Date.now()}`,
+            orderNumber: generateOrderId(),
+            buyerId: user.id,
+            buyerName: `${user.profile.firstName} ${user.profile.lastName}`,
+            buyerPhone: user.profile.phone,
+            vendorId: "vendor-1", // Mock Vendor (assuming single vendor for now or derived from cart)
+            vendorName: "Chisom Gadgets", // Mock Vendor Name
+            campusId: user.profile.campusId,
+            items: items.map(item => ({
+                id: `item-${Date.now()}-${Math.random()}`,
+                productId: item.product.id,
+                productName: item.product.name,
+                price: item.product.price,
+                quantity: item.quantity,
+                image: item.product.image,
+                product: item.product // Store the full product info for reference
+            })),
+            subtotal: subtotal,
+            deliveryFee: deliveryFee,
+            discount: discount,
+            total: total,
+            deliveryAddress: selectedAddressData ? {
+                id: selectedAddressData.id,
+                label: selectedAddressData.label,
+                fullAddress: selectedAddressData.fullAddress,
+                isDefault: selectedAddressData.isDefault
+            } : {
+                id: "default-addr",
+                label: "Default Address",
+                fullAddress: "No address selected",
+                isDefault: true
+            },
+            deliverySlot: selectedSlotData ? {
+                id: selectedSlotData.id,
+                label: selectedSlotData.label,
+                date: new Date().toISOString(), // Placeholder
+                startTime: "09:00", // Placeholder
+                endTime: "17:00", // Placeholder
+                fee: selectedSlotData.fee
+            } : {
+                id: "default-slot",
+                label: "Standard Delivery",
+                date: new Date().toISOString(),
+                startTime: "09:00",
+                endTime: "17:00",
+                fee: 0
+            },
+            paymentMethod: selectedPayment as any,
+            paymentStatus: "paid", // Assuming successful payment
+            status: "pending",
+            statusHistory: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        // Dispatch to store
+        placeOrder(newOrder);
+
+        // Simulate API delay
+        setTimeout(() => {
+            setIsProcessing(false);
+            setOrderNumber(newOrder.orderNumber); // Set the order number for display
+            clearCart(); // Clear the cart after placing order
+            setCurrentStep("confirm");
+            toast.success("Order placed successfully!");
+        }, 2000);
     };
 
     // Address management functions
     const openAddAddress = () => {
         setEditingAddress(null);
-        setAddressForm({ label: "", detail: "", fullAddress: "", type: "hostel" });
+        setAddressForm({ label: "", fullAddress: "", type: "Home", phone: user?.profile.phone || "", isDefault: false });
         setShowAddressModal(true);
     };
 
@@ -170,9 +224,10 @@ export default function CheckoutPage() {
         setEditingAddress(address);
         setAddressForm({
             label: address.label,
-            detail: address.detail,
             fullAddress: address.fullAddress,
             type: address.type,
+            phone: address.phone,
+            isDefault: address.isDefault
         });
         setShowAddressModal(true);
     };
@@ -180,31 +235,37 @@ export default function CheckoutPage() {
     const handleSaveAddress = () => {
         if (!addressForm.label || !addressForm.fullAddress) return;
 
+        // Complete the address object
+        const addressData = {
+            ...addressForm,
+            type: addressForm.type || "Home",
+            phone: addressForm.phone || "",
+            isDefault: !!addressForm.isDefault
+        } as Address;
+
         if (editingAddress) {
             // Update existing
-            setAddresses(addresses.map(addr =>
-                addr.id === editingAddress.id
-                    ? { ...addr, ...addressForm }
-                    : addr
-            ));
+            updateAddress({ ...editingAddress, ...addressData });
         } else {
             // Add new
             const newAddress: Address = {
-                id: Date.now().toString(),
-                ...addressForm,
+                id: crypto.randomUUID(),
+                ...addressData,
                 isDefault: addresses.length === 0,
             };
-            setAddresses([...addresses, newAddress]);
+            addAddress(newAddress);
             setSelectedAddress(newAddress.id);
         }
         setShowAddressModal(false);
     };
 
     const handleDeleteAddress = (id: string) => {
-        const filtered = addresses.filter(addr => addr.id !== id);
-        setAddresses(filtered);
-        if (selectedAddress === id && filtered.length > 0) {
-            setSelectedAddress(filtered[0].id);
+        deleteAddress(id);
+        if (selectedAddress === id) {
+            // select another if available
+            const remaining = addresses.filter(a => a.id !== id);
+            if (remaining.length > 0) setSelectedAddress(remaining[0].id);
+            else setSelectedAddress("");
         }
     };
 
@@ -223,12 +284,14 @@ export default function CheckoutPage() {
             {/* Minimal Header */}
             <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-2xl border-b border-border/40">
                 <div className="flex items-center justify-between px-4 h-14 max-w-2xl mx-auto">
-                    <button
+                    <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={goBack}
-                        className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+                        className="-ml-2 rounded-full hover:bg-muted"
                     >
                         <ArrowLeft className="w-5 h-5" />
-                    </button>
+                    </Button>
                     <h1 className="font-semibold text-base">
                         {currentStep === "confirm" ? "Order Placed" : "Checkout"}
                     </h1>
@@ -325,26 +388,30 @@ export default function CheckoutPage() {
                                             {/* Selection & Actions */}
                                             <div className="absolute top-4 right-4 flex items-center gap-2">
                                                 {/* Edit Button */}
-                                                <button
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         openEditAddress(address);
                                                     }}
-                                                    className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                                                    className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground"
                                                 >
                                                     <Edit3 className="w-3.5 h-3.5" />
-                                                </button>
+                                                </Button>
                                                 {/* Delete Button */}
                                                 {addresses.length > 1 && (
-                                                    <button
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             handleDeleteAddress(address.id);
                                                         }}
-                                                        className="w-8 h-8 rounded-full bg-muted hover:bg-destructive/10 flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors"
+                                                        className="w-8 h-8 rounded-full bg-muted hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
                                                     >
                                                         <Trash2 className="w-3.5 h-3.5" />
-                                                    </button>
+                                                    </Button>
                                                 )}
                                                 {/* Selection Indicator */}
                                                 <div
@@ -388,7 +455,7 @@ export default function CheckoutPage() {
                                                             </Badge>
                                                         )}
                                                     </div>
-                                                    <p className="text-sm text-muted-foreground mt-0.5">{address.detail}</p>
+                                                    <p className="text-sm text-muted-foreground mt-0.5">{address.phone}</p>
                                                     <p className="text-xs text-muted-foreground/70 mt-2 line-clamp-1">
                                                         {address.fullAddress}
                                                     </p>
@@ -399,13 +466,14 @@ export default function CheckoutPage() {
                                 })}
 
                                 {/* Add New Address */}
-                                <button
+                                <Button
+                                    variant="ghost"
                                     onClick={openAddAddress}
-                                    className="w-full p-5 rounded-2xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-muted/30 transition-all flex items-center justify-center gap-3 text-muted-foreground hover:text-foreground"
+                                    className="w-full h-auto p-5 rounded-2xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-muted/30 flex items-center justify-center gap-3 text-muted-foreground hover:text-foreground normal-case"
                                 >
                                     <Plus className="w-5 h-5" />
                                     <span className="font-medium">Add New Address</span>
-                                </button>
+                                </Button>
                             </div>
                         </motion.div>
                     )}
@@ -493,14 +561,15 @@ export default function CheckoutPage() {
                                 <MapPin className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                                 <div className="flex-1">
                                     <p className="text-sm font-medium">Delivering to</p>
-                                    <p className="text-xs text-muted-foreground">{selectedAddressData?.label}, {selectedAddressData?.detail}</p>
+                                    <p className="text-xs text-muted-foreground">{selectedAddressData?.label}, {selectedAddressData?.fullAddress}</p>
                                 </div>
-                                <button
+                                <Button
+                                    variant="link"
                                     onClick={() => setCurrentStep("address")}
-                                    className="text-xs font-medium text-primary hover:underline"
+                                    className="text-xs font-medium text-primary h-auto p-0"
                                 >
                                     Change
-                                </button>
+                                </Button>
                             </div>
                         </motion.div>
                     )}
@@ -669,9 +738,10 @@ export default function CheckoutPage() {
                                 className="mb-8"
                             >
                                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Order Number</p>
-                                <button
+                                <Button
+                                    variant="secondary"
                                     onClick={handleCopyOrder}
-                                    className="inline-flex items-center gap-2 bg-muted hover:bg-muted/80 rounded-xl px-5 py-3 font-mono text-lg transition-colors"
+                                    className="gap-2 bg-muted hover:bg-muted/80 rounded-xl px-5 py-6 font-mono text-lg h-auto"
                                 >
                                     <span>{orderNumber}</span>
                                     {copied ? (
@@ -679,7 +749,7 @@ export default function CheckoutPage() {
                                     ) : (
                                         <Copy className="w-4 h-4 text-muted-foreground" />
                                     )}
-                                </button>
+                                </Button>
                             </motion.div>
 
                             <motion.div
@@ -777,12 +847,14 @@ export default function CheckoutPage() {
                                         Add a delivery location on campus
                                     </p>
                                 </div>
-                                <button
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
                                     onClick={() => setShowAddressModal(false)}
-                                    className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center transition-colors"
+                                    className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80"
                                 >
                                     <X className="w-4 h-4" />
-                                </button>
+                                </Button>
                             </div>
 
                             {/* Form Content */}
@@ -859,18 +931,18 @@ export default function CheckoutPage() {
                                     </div>
                                 </div>
 
-                                {/* Room/Floor Details */}
+                                {/* Phone Number */}
                                 <div className="space-y-2">
-                                    <Label htmlFor="detail" className="text-sm font-medium">
-                                        Room or Floor
+                                    <Label htmlFor="phone" className="text-sm font-medium">
+                                        Phone Number
                                     </Label>
                                     <div className="relative">
-                                        <Home className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                                        <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                         <Input
-                                            id="detail"
-                                            placeholder="e.g., Room 234, Ground Floor"
-                                            value={addressForm.detail}
-                                            onChange={(e) => setAddressForm({ ...addressForm, detail: e.target.value })}
+                                            id="phone"
+                                            placeholder="e.g., +234 801 234 5678"
+                                            value={addressForm.phone}
+                                            onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
                                             className="h-14 pl-12 rounded-2xl text-base bg-muted/50 border-0 focus:bg-background focus:ring-2 focus:ring-primary/20"
                                         />
                                     </div>

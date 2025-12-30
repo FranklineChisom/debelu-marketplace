@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
     ArrowLeft,
@@ -14,7 +14,10 @@ import {
     Package,
     Tag,
     Trash2,
-    AlertTriangle
+    AlertTriangle,
+    List,
+    ShieldCheck,
+    MinusCircle
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -30,12 +33,24 @@ import {
     DialogTrigger,
     DialogFooter
 } from "@/components/ui/dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
-import { PRODUCT_CATEGORIES } from "@/lib/constants";
+import { PRODUCT_CATEGORIES, PRODUCT_CONDITIONS } from "@/lib/constants";
 
 interface ProductFormProps {
     initialData?: any;
     isEditing?: boolean;
+}
+
+interface Spec {
+    key: string;
+    value: string;
 }
 
 export default function ProductForm({ initialData, isEditing = false }: ProductFormProps) {
@@ -43,11 +58,29 @@ export default function ProductForm({ initialData, isEditing = false }: ProductF
     const [isLoading, setIsLoading] = useState(false);
     const [images, setImages] = useState<string[]>(initialData?.images || []);
     const [selectedCategory, setSelectedCategory] = useState(initialData?.category || "");
+    const [selectedCondition, setSelectedCondition] = useState(initialData?.condition || "");
+    const [warranty, setWarranty] = useState(initialData?.warranty || "");
     const [hasVariants, setHasVariants] = useState(initialData?.hasVariants || false);
+    const [specs, setSpecs] = useState<Spec[]>(initialData?.specs || [{ key: "", value: "" }]);
+
+    const handleAddSpec = () => {
+        setSpecs([...specs, { key: "", value: "" }]);
+    };
+
+    const handleRemoveSpec = (index: number) => {
+        setSpecs(specs.filter((_, i) => i !== index));
+    };
+
+    const handleSpecChange = (index: number, field: "key" | "value", value: string) => {
+        const newSpecs = [...specs];
+        newSpecs[index][field] = value;
+        setSpecs(newSpecs);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
+        // Simulate API call
         await new Promise((r) => setTimeout(r, 1500));
         router.push("/vendor/products");
     };
@@ -121,6 +154,39 @@ export default function ProductForm({ initialData, isEditing = false }: ProductF
                                         <label className="text-sm font-medium">Product Name</label>
                                         <Input defaultValue={initialData?.name} placeholder="e.g., Dell Inspiron 15 Laptop" required />
                                     </div>
+                                    <div className="grid sm:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">Category</label>
+                                            <Select value={selectedCategory} onValueChange={setSelectedCategory} required>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select Category" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {PRODUCT_CATEGORIES.map((cat) => (
+                                                        <SelectItem key={cat.id} value={cat.id}>
+                                                            <span className="mr-2">{cat.emoji}</span>
+                                                            {cat.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">Condition</label>
+                                            <Select value={selectedCondition} onValueChange={setSelectedCondition} required>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select Condition" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {PRODUCT_CONDITIONS.map((cond) => (
+                                                        <SelectItem key={cond.id} value={cond.id}>
+                                                            {cond.label}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">Description</label>
                                         <textarea
@@ -129,6 +195,72 @@ export default function ProductForm({ initialData, isEditing = false }: ProductF
                                             defaultValue={initialData?.description}
                                             required
                                         />
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+
+                        {/* Specs & Details */}
+                        <motion.div variants={fadeInUp}>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <List className="w-4 h-4" />
+                                        Specifications & Details
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium flex items-center gap-2">
+                                            <ShieldCheck className="w-4 h-4 text-muted-foreground" />
+                                            Warranty Information
+                                        </label>
+                                        <Input
+                                            value={warranty}
+                                            onChange={(e) => setWarranty(e.target.value)}
+                                            placeholder="e.g., 1 Year Official Warranty"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <label className="text-sm font-medium">Key Specifications</label>
+                                        <div className="space-y-3">
+                                            {specs.map((spec, index) => (
+                                                <div key={index} className="flex gap-2 items-start">
+                                                    <Input
+                                                        placeholder="Feature (e.g. RAM)"
+                                                        value={spec.key}
+                                                        onChange={(e) => handleSpecChange(index, "key", e.target.value)}
+                                                        className="flex-1"
+                                                    />
+                                                    <Input
+                                                        placeholder="Value (e.g. 16GB)"
+                                                        value={spec.value}
+                                                        onChange={(e) => handleSpecChange(index, "value", e.target.value)}
+                                                        className="flex-1"
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleRemoveSpec(index)}
+                                                        className="text-muted-foreground hover:text-destructive shrink-0"
+                                                    >
+                                                        <MinusCircle className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={handleAddSpec}
+                                                className="w-full border-dashed"
+                                            >
+                                                <Plus className="w-4 h-4 mr-2" />
+                                                Add Specification
+                                            </Button>
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>

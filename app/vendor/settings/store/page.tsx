@@ -22,7 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/components/ui/use-toast"; // Assuming this exists, or use console log
+import { toast } from "sonner";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 import { CAMPUSES } from "@/lib/constants";
 
@@ -46,8 +46,9 @@ export default function StoreSettingsPage() {
         // Simulate API call
         await new Promise(r => setTimeout(r, 1500));
         setIsLoading(false);
-        // toast({ title: "Changes saved", description: "Your store profile has been updated." });
-        alert("Changes saved successfully!");
+        toast("Changes saved", {
+            description: "Your store profile has been updated successfully.",
+        });
     };
 
     return (

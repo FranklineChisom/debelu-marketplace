@@ -134,19 +134,21 @@ export default function CartPage() {
         <div className="flex-1 overflow-y-auto scrollbar-thin">
             {/* Header */}
             <header className="h-14 lg:h-16 flex items-center justify-between px-6 lg:px-12 border-b border-foreground/10 sticky top-0 z-30 bg-background">
-                <button
+                <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => router.back()}
-                    className="lg:hidden w-10 h-10 flex items-center justify-center rounded-full hover:bg-foreground/5 transition-colors"
+                    className="lg:hidden rounded-full hover:bg-foreground/5"
                 >
                     <ArrowLeft className="w-5 h-5" />
-                </button>
+                </Button>
                 <h1 className="text-lg lg:text-xl font-black tracking-tight">
                     CART {hasItems && <span className="text-muted-foreground">({items.length})</span>}
                 </h1>
                 {hasItems ? (
-                    <button onClick={clearCart} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    <Button variant="ghost" onClick={clearCart} className="text-sm text-muted-foreground hover:text-foreground">
                         Clear
-                    </button>
+                    </Button>
                 ) : (
                     <div className="w-10" />
                 )}
@@ -212,32 +214,38 @@ export default function CartPage() {
                                             <div className="flex-1 min-w-0 flex flex-col">
                                                 <div className="flex items-start justify-between gap-2">
                                                     <h3 className="font-bold lg:text-lg line-clamp-2">{item.product.name}</h3>
-                                                    <button
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
                                                         onClick={() => removeItem(item.product.id, item.variant)}
-                                                        className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-foreground/5 text-muted-foreground hover:text-foreground transition-colors"
+                                                        className="h-8 w-8 rounded-full hover:bg-foreground/5 text-muted-foreground hover:text-foreground"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
-                                                    </button>
+                                                    </Button>
                                                 </div>
                                                 <p className="text-xs text-muted-foreground mt-1">{item.product.vendorName}</p>
 
                                                 <div className="mt-auto pt-4 flex items-center justify-between">
                                                     {/* Quantity */}
                                                     <div className="flex items-center gap-1 border border-foreground/10 rounded-full">
-                                                        <button
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
                                                             onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.variant)}
-                                                            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-foreground/5 disabled:opacity-50"
+                                                            className="w-9 h-9 rounded-full hover:bg-foreground/5 disabled:opacity-50"
                                                             disabled={item.quantity <= 1}
                                                         >
                                                             <Minus className="w-4 h-4" />
-                                                        </button>
+                                                        </Button>
                                                         <span className="w-8 text-center font-bold">{item.quantity}</span>
-                                                        <button
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
                                                             onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.variant)}
-                                                            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-foreground/5"
+                                                            className="w-9 h-9 rounded-full hover:bg-foreground/5"
                                                         >
                                                             <Plus className="w-4 h-4" />
-                                                        </button>
+                                                        </Button>
                                                     </div>
 
                                                     {/* Price */}

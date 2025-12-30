@@ -34,6 +34,7 @@ import {
     Pie,
     Cell
 } from "recharts";
+import { StatCard } from "@/components/vendor/StatCard";
 
 // Mock data
 const revenueData = [
@@ -46,11 +47,20 @@ const revenueData = [
     { name: "Sun", total: 470000 },
 ];
 
+// Chart Colors Configuration
+const CHART_COLORS = {
+    revenue: "hsl(var(--primary))",
+    orders: "#ec4899", // Pink 500
+    customers: "#06b6d4", // Cyan 500
+    views: "#f59e0b", // Amber 500
+    others: "#94a3b8", // Slate 400
+};
+
 const categoryData = [
-    { name: "Electronics", value: 45, color: "#8b5cf6" },
-    { name: "Fashion", value: 30, color: "#ec4899" },
-    { name: "Accessories", value: 15, color: "#06b6d4" },
-    { name: "Others", value: 10, color: "#94a3b8" },
+    { name: "Electronics", value: 45, color: CHART_COLORS.revenue },
+    { name: "Fashion", value: 30, color: CHART_COLORS.orders },
+    { name: "Accessories", value: 15, color: CHART_COLORS.customers },
+    { name: "Others", value: 10, color: CHART_COLORS.others },
 ];
 
 const periodStats = {
@@ -105,40 +115,48 @@ export default function AnalyticsPage() {
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
             >
                 <StatCard
-                    title="Total Revenue"
-                    value={formatNaira(periodStats.revenue.value)}
+                    label="Total Revenue"
+                    value={periodStats.revenue.value}
+                    formatter="currency"
                     change={periodStats.revenue.change}
-                    isPositive={periodStats.revenue.isPositive}
+                    trend={periodStats.revenue.isPositive ? "up" : "down"}
                     icon={DollarSign}
                     chartData={revenueData}
-                    chartColor="#8b5cf6"
+                    chartColor={CHART_COLORS.revenue}
+                    variant="analytics"
                 />
                 <StatCard
-                    title="Total Orders"
-                    value={periodStats.orders.value.toString()}
+                    label="Total Orders"
+                    value={periodStats.orders.value}
+                    formatter="number"
                     change={periodStats.orders.change}
-                    isPositive={periodStats.orders.isPositive}
+                    trend={periodStats.orders.isPositive ? "up" : "down"}
                     icon={ShoppingCart}
-                    chartData={revenueData} // Using same mock data for visual consistency in demo
-                    chartColor="#ec4899"
+                    chartData={revenueData}
+                    chartColor={CHART_COLORS.orders}
+                    variant="analytics"
                 />
                 <StatCard
-                    title="New Customers"
-                    value={periodStats.customers.value.toString()}
+                    label="New Customers"
+                    value={periodStats.customers.value}
+                    formatter="number"
                     change={periodStats.customers.change}
-                    isPositive={periodStats.customers.isPositive}
+                    trend={periodStats.customers.isPositive ? "up" : "down"}
                     icon={Users}
                     chartData={revenueData}
-                    chartColor="#06b6d4"
+                    chartColor={CHART_COLORS.customers}
+                    variant="analytics"
                 />
                 <StatCard
-                    title="Product Views"
-                    value={periodStats.views.value.toLocaleString()}
+                    label="Product Views"
+                    value={periodStats.views.value}
+                    formatter="number"
                     change={periodStats.views.change}
-                    isPositive={periodStats.views.isPositive}
+                    trend={periodStats.views.isPositive ? "up" : "down"}
                     icon={Eye}
                     chartData={revenueData}
-                    chartColor="#f59e0b"
+                    chartColor={CHART_COLORS.views}
+                    variant="analytics"
                 />
             </motion.div>
 
@@ -165,8 +183,8 @@ export default function AnalyticsPage() {
                                     <AreaChart data={revenueData}>
                                         <defs>
                                             <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                                                <stop offset="5%" stopColor={CHART_COLORS.revenue} stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor={CHART_COLORS.revenue} stopOpacity={0} />
                                             </linearGradient>
                                         </defs>
                                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
@@ -199,7 +217,7 @@ export default function AnalyticsPage() {
                                         <Area
                                             type="monotone"
                                             dataKey="total"
-                                            stroke="#8b5cf6"
+                                            stroke={CHART_COLORS.revenue}
                                             strokeWidth={3}
                                             fillOpacity={1}
                                             fill="url(#colorRevenue)"
@@ -280,8 +298,8 @@ export default function AnalyticsPage() {
                                 <div key={i} className="flex items-center justify-between group">
                                     <div className="flex items-start gap-4">
                                         <div className={`p-2 rounded-full mt-1 ${activity.type === 'order' ? 'bg-primary/10 text-primary' :
-                                                activity.type === 'review' ? 'bg-yellow-500/10 text-yellow-500' :
-                                                    'bg-red-500/10 text-red-500'
+                                            activity.type === 'review' ? 'bg-yellow-500/10 text-yellow-500' :
+                                                'bg-red-500/10 text-red-500'
                                             }`}>
                                             {activity.type === 'order' && <ShoppingCart className="w-4 h-4" />}
                                             {activity.type === 'review' && <TrendingUp className="w-4 h-4" />}
@@ -312,60 +330,5 @@ export default function AnalyticsPage() {
                 </Card>
             </motion.div>
         </motion.div>
-    );
-}
-
-function StatCard({
-    title,
-    value,
-    change,
-    isPositive,
-    icon: Icon,
-    chartData,
-    chartColor
-}: {
-    title: string;
-    value: string;
-    change: number;
-    isPositive: boolean;
-    icon: any;
-    chartData: any[];
-    chartColor: string;
-}) {
-    return (
-        <Card className="border-border/50 overflow-hidden relative">
-            <CardContent className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                    <div className="p-2 bg-primary/5 rounded-xl text-primary">
-                        <Icon className="w-5 h-5" />
-                    </div>
-                    <Badge variant={isPositive ? "success" : "destructive"} className={isPositive ? "bg-emerald-500/10 text-emerald-500 border-0" : "bg-red-500/10 text-red-500 border-0"}>
-                        {isPositive ? <ArrowUpRight className="w-3 h-3 mr-1" /> : <ArrowDownRight className="w-3 h-3 mr-1" />}
-                        {Math.abs(change)}%
-                    </Badge>
-                </div>
-
-                <div className="space-y-1 z-10 relative">
-                    <h3 className="text-2xl font-bold tracking-tight">{value}</h3>
-                    <p className="text-xs text-muted-foreground">{title}</p>
-                </div>
-
-                {/* Mini background chart */}
-                <div className="absolute bottom-0 right-0 w-[120px] h-[60px] opacity-20">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={chartData}>
-                            <Area
-                                type="monotone"
-                                dataKey="total"
-                                stroke={chartColor}
-                                strokeWidth={2}
-                                fill={chartColor}
-                                fillOpacity={0.2}
-                            />
-                        </AreaChart>
-                    </ResponsiveContainer>
-                </div>
-            </CardContent>
-        </Card>
     );
 }

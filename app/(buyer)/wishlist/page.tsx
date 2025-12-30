@@ -108,13 +108,15 @@ export default function WishlistPage() {
         <div className="flex-1 overflow-y-auto bg-background">
             {/* Minimal Header */}
             <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-2xl border-b border-border/40">
-                <div className="flex items-center justify-between px-4 h-14 max-w-3xl mx-auto">
-                    <button
+                <div className="flex items-center justify-between px-4 h-16 max-w-3xl mx-auto">
+                    <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => router.back()}
-                        className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+                        className="-ml-2 rounded-full hover:bg-muted"
                     >
                         <ArrowLeft className="w-5 h-5" />
-                    </button>
+                    </Button>
                     <h1 className="font-semibold text-base">Wishlist</h1>
                     <div className="w-10" />
                 </div>
@@ -160,9 +162,9 @@ export default function WishlistPage() {
                             <p className="text-sm text-muted-foreground">
                                 {items.length} {items.length === 1 ? "item" : "items"} saved
                             </p>
-                            <button className="text-sm text-primary font-medium hover:underline">
+                            <Button variant="link" className="text-sm font-medium h-auto p-0">
                                 Share All
-                            </button>
+                            </Button>
                         </motion.div>
 
                         {/* Wishlist Grid */}
@@ -208,13 +210,17 @@ export default function WishlistPage() {
 
                                         {/* Quick Actions - Top Right */}
                                         <div className="absolute top-3 right-3 flex gap-2">
-                                            <motion.button
-                                                whileTap={{ scale: 0.9 }}
-                                                onClick={() => togglePriceAlert(item.id)}
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    togglePriceAlert(item.id);
+                                                }}
                                                 className={cn(
-                                                    "w-9 h-9 rounded-full backdrop-blur-xl flex items-center justify-center transition-all",
+                                                    "w-9 h-9 rounded-full backdrop-blur-xl transition-all",
                                                     item.priceAlert
-                                                        ? "bg-primary text-primary-foreground"
+                                                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
                                                         : "bg-background/80 text-muted-foreground hover:bg-background"
                                                 )}
                                             >
@@ -223,14 +229,18 @@ export default function WishlistPage() {
                                                 ) : (
                                                     <BellOff className="w-4 h-4" />
                                                 )}
-                                            </motion.button>
-                                            <motion.button
-                                                whileTap={{ scale: 0.9 }}
-                                                onClick={() => removeItem(item.id)}
-                                                className="w-9 h-9 rounded-full bg-background/80 backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    removeItem(item.id);
+                                                }}
+                                                className="w-9 h-9 rounded-full bg-background/80 backdrop-blur-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                             >
                                                 <Trash2 className="w-4 h-4" />
-                                            </motion.button>
+                                            </Button>
                                         </div>
 
                                         {/* Content */}

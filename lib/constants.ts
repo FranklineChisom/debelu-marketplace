@@ -37,7 +37,19 @@ export const PRODUCT_CATEGORIES = [
     { id: "other", name: "Other", icon: "📦", emoji: "📦" },
 ] as const;
 
+
 export type CategoryId = typeof PRODUCT_CATEGORIES[number]["id"];
+
+// Product conditions
+export const PRODUCT_CONDITIONS = [
+    { id: "new", label: "Brand New" },
+    { id: "open_box", label: "Open Box" },
+    { id: "used_like_new", label: "Used - Like New" },
+    { id: "used_good", label: "Used - Good" },
+    { id: "used_fair", label: "Used - Fair" },
+] as const;
+
+export type ProductCondition = typeof PRODUCT_CONDITIONS[number]["id"];
 
 // Order statuses
 export const ORDER_STATUSES = {

@@ -24,55 +24,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatNaira, cn } from "@/lib/utils";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 
-// Mock Orders Data
-const ORDERS = [
-    {
-        id: "ORD-2458-9923",
-        date: "Today, 10:30 AM",
-        status: "shipping",
-        total: 12500,
-        items: [
-            { name: "Nike Air Max 90", image: "https://images.unsplash.com/photo-1552346154-21d32810aba3?q=80&w=2670&auto=format&fit=crop" },
-            { name: "Running Socks (3pk)", image: "https://images.unsplash.com/photo-1586350977771-b3b0abd50c82?q=80&w=2572&auto=format&fit=crop" }
-        ],
-        vendor: "Campus Kicks",
-        deliveryTime: "Arriving by 2:00 PM"
-    },
-    {
-        id: "ORD-9928-1122",
-        date: "Yesterday",
-        status: "processing",
-        total: 4500,
-        items: [
-            { name: "Reading Lamp LED", image: "https://images.unsplash.com/photo-1534073828943-f801091a7499?q=80&w=2574&auto=format&fit=crop" }
-        ],
-        vendor: "Gadget Hub",
-        deliveryTime: "Processing order"
-    },
-    {
-        id: "ORD-1102-3344",
-        date: "Dec 24, 2024",
-        status: "delivered",
-        total: 78000,
-        items: [
-            { name: "Mechanical Keyboard", image: "https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=2671&auto=format&fit=crop" },
-            { name: "Desk Mat", image: "https://images.unsplash.com/photo-1629905678767-f7035ce46112?q=80&w=2670&auto=format&fit=crop" }
-        ],
-        vendor: "Tech Haven",
-        deliveryTime: "Delivered to Hostel A"
-    },
-    {
-        id: "ORD-5544-2211",
-        date: "Dec 12, 2024",
-        status: "cancelled",
-        total: 15000,
-        items: [
-            { name: "Textbooks Bundle", image: "https://images.unsplash.com/photo-1491841550275-ad7854e35ca6?q=80&w=2574&auto=format&fit=crop" }
-        ],
-        vendor: "Book Worms",
-        deliveryTime: "Cancelled by you"
-    }
-];
+import { useMarketplaceStore } from "@/stores/useMarketplaceStore";
+
 
 const STATUS_CONFIG = {
     pending: { label: "Pending", icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" },
@@ -86,12 +39,17 @@ export default function OrdersPage() {
     const [activeTab, setActiveTab] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
 
-    const filteredOrders = ORDERS.filter(order => {
-        const matchesSearch = order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            order.vendor.toLowerCase().includes(searchQuery.toLowerCase());
+    const orders = useMarketplaceStore((state) => state.orders);
+
+    const filteredOrders = orders.filter(order => {
+        // Filter by current user (mock user-1)
+        if (order.buyerId !== "user-1") return false;
+
+        const matchesSearch = order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            order.vendorName.toLowerCase().includes(searchQuery.toLowerCase());
 
         if (activeTab === "all") return matchesSearch;
-        if (activeTab === "active") return matchesSearch && ["pending", "processing", "shipping"].includes(order.status);
+        if (activeTab === "active") return matchesSearch && ["pending", "confirmed", "processing", "delivering"].includes(order.status);
         if (activeTab === "completed") return matchesSearch && order.status === "delivered";
         if (activeTab === "cancelled") return matchesSearch && order.status === "cancelled";
         return matchesSearch;
@@ -148,16 +106,16 @@ export default function OrdersPage() {
                                             <div className="p-5 md:p-6">
                                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                                                     <div className="flex items-center gap-3">
-                                                        <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", status.bg)}>
-                                                            <StatusIcon className={cn("w-5 h-5", status.color)} />
+                                                        <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", status?.bg || "bg-gray-100")}>
+                                                            <StatusIcon className={cn("w-5 h-5", status?.color || "text-gray-500")} />
                                                         </div>
                                                         <div>
                                                             <div className="flex items-center gap-2 mb-0.5">
-                                                                <h3 className="font-semibold">{order.vendor}</h3>
-                                                                <span className="text-xs text-muted-foreground">• {order.date}</span>
+                                                                <h3 className="font-semibold">{order.vendorName}</h3>
+                                                                <span className="text-xs text-muted-foreground">• {new Date(order.createdAt).toLocaleDateString()}</span>
                                                             </div>
-                                                            <div className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border", status.bg, status.color, status.border)}>
-                                                                {status.label}
+                                                            <div className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border", status?.bg, status?.color, status?.border)}>
+                                                                {status?.label || order.status}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -173,7 +131,7 @@ export default function OrdersPage() {
                                                             <div key={i} className="relative w-12 h-12 rounded-lg border-2 border-background overflow-hidden bg-muted">
                                                                 <Image
                                                                     src={item.image}
-                                                                    alt={item.name}
+                                                                    alt={item.productName}
                                                                     fill
                                                                     className="object-cover"
                                                                 />
@@ -186,7 +144,7 @@ export default function OrdersPage() {
                                                         )}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-sm font-medium line-clamp-1">{order.items[0].name}</p>
+                                                        <p className="text-sm font-medium line-clamp-1">{order.items[0].productName}</p>
                                                         {order.items.length > 1 && (
                                                             <p className="text-xs text-muted-foreground">and {order.items.length - 1} other item(s)</p>
                                                         )}
@@ -195,10 +153,10 @@ export default function OrdersPage() {
                                                 </div>
 
                                                 {/* Delivery Footnote for Active Orders */}
-                                                {["processing", "shipping"].includes(order.status) && (
+                                                {["processing", "delivering"].includes(order.status) && (
                                                     <div className="mt-2 bg-muted/30 -mx-6 -mb-6 px-6 py-3 flex items-center gap-2 text-xs font-medium text-foreground/80">
                                                         <Truck className="w-3.5 h-3.5 text-primary" />
-                                                        {order.deliveryTime}
+                                                        {order.deliverySlot?.label ? `Delivery: ${order.deliverySlot.label}` : "In transit"}
                                                     </div>
                                                 )}
                                             </div>

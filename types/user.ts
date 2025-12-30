@@ -5,30 +5,56 @@
 import type { CampusId } from "@/lib/constants";
 import type { DeliveryAddress } from "./order";
 
+// Consolidated User Types
+
+export interface Address {
+    id: string;
+    type: "Home" | "Work" | "Other";
+    label: string;
+    fullAddress: string; // Renamed from description to match DeliveryAddress
+    phone: string;
+    isDefault: boolean;
+}
+
+export interface PaymentMethod {
+    id: string;
+    type: "Visa" | "Mastercard" | "Verve";
+    last4: string;
+    expiry: string;
+    cardHolder: string;
+    isDefault: boolean;
+    gradient?: string;
+}
+
+export interface UserProfile {
+    firstName: string;
+    lastName: string;
+    username: string;
+    email: string;
+    phone: string;
+    avatar: string;
+    bio: string;
+    campusId: CampusId;
+}
+
+// User role definition
+export type UserRole = "buyer" | "vendor" | "admin";
+
 export interface User {
     id: string;
-    phone: string;
-    email?: string;
-    name: string;
-    avatar?: string;
+    profile: UserProfile;
 
-    // Campus
-    campusId: CampusId;
+    // Data
+    addresses: Address[];
+    paymentMethods: PaymentMethod[];
 
-    // Type
-    role: "buyer" | "vendor" | "admin";
-
-    // Profile
-    addresses: DeliveryAddress[];
-
-    // Preferences
+    // Preferences & Stats
+    role: UserRole;
     preferences: UserPreferences;
 
     // Stats
     orderCount: number;
     totalSpent: number;
-
-    // Gamification
     points: number;
     badges: string[];
     streak: number;

@@ -27,77 +27,77 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 import { ProfileImageEditor } from "@/components/shared/profile-image-editor";
-import { Address, AddressDialog } from "@/components/shared/address-dialog";
-import { PaymentMethod, PaymentMethodDialog } from "@/components/shared/payment-method-dialog";
+import { AddressDialog } from "@/components/shared/address-dialog";
+import { PaymentMethodDialog } from "@/components/shared/payment-method-dialog";
+import { useMarketplaceStore } from "@/stores/useMarketplaceStore";
+import { Address, PaymentMethod } from "@/types/user";
 
 export default function SettingsPage() {
+    const user = useMarketplaceStore((state) => state.user);
+    const updateProfile = useMarketplaceStore((state) => state.updateProfile);
+    const addAddress = useMarketplaceStore((state) => state.addAddress);
+    const updateAddress = useMarketplaceStore((state) => state.updateAddress);
+    const deleteAddress = useMarketplaceStore((state) => state.deleteAddress);
+    const setDefaultAddress = useMarketplaceStore((state) => state.setDefaultAddress);
+    const addPaymentMethod = useMarketplaceStore((state) => state.addPaymentMethod);
+    const deletePaymentMethod = useMarketplaceStore((state) => state.deletePaymentMethod);
+    const setDefaultPaymentMethod = useMarketplaceStore((state) => state.setDefaultPaymentMethod);
+
     const [activeTab, setActiveTab] = useState("profile");
     const [isEditorOpen, setIsEditorOpen] = useState(false);
-    const [avatarUrl, setAvatarUrl] = useState("https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=2574&auto=format&fit=crop");
 
     // Address State
     const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
     const [editingAddress, setEditingAddress] = useState<Address | null>(null);
-    const [addresses, setAddresses] = useState<Address[]>([
-        {
-            id: "1",
-            type: "Home",
-            label: "Moremi Hall, Room 234",
-            description: "Moremi Hall, University of Lagos, Akoka, Yaba, Lagos.",
-            phone: "+234 801 234 5678",
-            isDefault: true
-        },
-        {
-            id: "2",
-            type: "Work",
-            label: "Faculty of Engineering",
-            description: "Department of Systems Engineering, UNILAG.",
-            phone: "+234 809 876 5432",
-            isDefault: false
-        }
-    ]);
+    const [deleteTarget, setDeleteTarget] = useState<{ type: 'address' | 'payment', id: string } | null>(null);
 
     // Payment Method State
     const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-    const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
-        {
-            id: "1",
-            type: "Mastercard",
-            last4: "4242",
-            expiry: "12/25",
-            cardHolder: "CHISOM FRANK",
-            isDefault: true,
-            gradient: "from-neutral-900 to-neutral-800"
-        },
-        {
-            id: "2",
-            type: "Visa",
-            last4: "8899",
-            expiry: "04/26",
-            cardHolder: "CHISOM FRANK",
-            isDefault: false
-        }
-    ]);
+
+    if (!user) return null; // Or loading state
+
+    const addresses = user.addresses;
+    const paymentMethods = user.paymentMethods;
+    const avatarUrl = user.profile.avatar;
 
     // Address Handlers
     const handleSaveAddress = (address: Address) => {
         if (editingAddress) {
-            setAddresses(prev => prev.map(a => a.id === address.id ? address : a));
+            updateAddress(address);
         } else {
-            // New address
-            const newAddress = { ...address, id: crypto.randomUUID() };
-            if (addresses.length === 0) newAddress.isDefault = true;
-            setAddresses(prev => [...prev, newAddress]);
+            // New address logic handled in store or here. Dialog usually passes complete object but ID might be missing or empty.
+            // AddressDialog generates ID if missing.
+            addAddress(address);
         }
 
-        // If the new/updated address is set as default, unset others
-        if (address.isDefault) {
-            setAddresses(prev => prev.map(a => a.id === address.id ? { ...a, isDefault: true } : { ...a, isDefault: false }));
+        // Default handling is now inside store actions or handled by logic inside add/update if simple.
+        // But store supports setDefaultAddress separately. 
+        // If the Dialog returns isDefault=true, we should probably ensure others are unset.
+        // The store logic I implemented roughly does: add => append, setDefault separate.
+        // Actually, let's just rely on the store actions.
+        if (address.isDefault && editingAddress) {
+            setDefaultAddress(address.id);
+        } else if (address.isDefault && !editingAddress) {
+            // For new address, if it's default, we might need a way to set it.
+            // But my current store `addAddress` implementation just appends.
+            // I'll assume `addAddress` handles it or I call setDefault.
+            // But wait, the address object HAS isDefault.
+            // My store simple implementation: `addresses: [...state.user.addresses, address]`
+            // Be careful: if I add with isDefault=true, I should update others to false.
+            // For now, let's keep it simple.
+            // Ideally, I should call setDefaultAddress(address.id) after adding if isDefault is true.
+            // But I don't have the ID for new address if generated inside Dialog?
+            // Ah, AddressDialog generates ID.
+            if (address.isDefault) {
+                // We need to unset others. The store's setDefaultAddress does exactly that for an ID.
+                setTimeout(() => setDefaultAddress(address.id), 0);
+            }
         }
 
         setIsAddressDialogOpen(false);
@@ -105,11 +105,23 @@ export default function SettingsPage() {
     };
 
     const handleDeleteAddress = (id: string) => {
-        setAddresses(prev => prev.filter(a => a.id !== id));
+        setDeleteTarget({ type: 'address', id });
+    };
+
+    const confirmDelete = () => {
+        if (!deleteTarget) return;
+
+        if (deleteTarget.type === 'address') {
+            deleteAddress(deleteTarget.id);
+        } else if (deleteTarget.type === 'payment') {
+            deletePaymentMethod(deleteTarget.id);
+        }
+
+        setDeleteTarget(null);
     };
 
     const handleSetDefaultAddress = (id: string) => {
-        setAddresses(prev => prev.map(a => ({ ...a, isDefault: a.id === id })));
+        setDefaultAddress(id);
     };
 
     const openNewAddressDialog = () => {
@@ -124,15 +136,15 @@ export default function SettingsPage() {
 
     // Payment Handlers
     const handleSavePaymentMethod = (method: PaymentMethod) => {
-        const newMethod = { ...method };
-        if (paymentMethods.length === 0) newMethod.isDefault = true;
-
-        setPaymentMethods(prev => [...prev, newMethod]);
+        addPaymentMethod(method);
+        if (method.isDefault) {
+            setTimeout(() => setDefaultPaymentMethod(method.id), 0);
+        }
         setIsPaymentDialogOpen(false);
     };
 
     const handleDeletePaymentMethod = (id: string) => {
-        setPaymentMethods(prev => prev.filter(p => p.id !== id));
+        setDeleteTarget({ type: 'payment', id });
     };
 
     return (
@@ -140,8 +152,8 @@ export default function SettingsPage() {
             <ProfileImageEditor
                 isOpen={isEditorOpen}
                 onClose={() => setIsEditorOpen(false)}
-                currentImage={avatarUrl}
-                onSave={(newImage) => setAvatarUrl(newImage)}
+                currentImage={avatarUrl || ""}
+                onSave={(newImage) => updateProfile({ avatar: newImage })}
             />
 
             <AddressDialog
@@ -156,6 +168,22 @@ export default function SettingsPage() {
                 onClose={() => setIsPaymentDialogOpen(false)}
                 onSave={handleSavePaymentMethod}
             />
+
+            <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Are you sure?</DialogTitle>
+                        <DialogDescription>
+                            This action cannot be undone. This will permanently delete the selected
+                            {deleteTarget?.type === 'address' ? ' address' : ' payment method'} from your account.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+                        <Button variant="destructive" onClick={confirmDelete}>Delete</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 space-y-8">
 
@@ -223,24 +251,24 @@ export default function SettingsPage() {
                                         <div className="grid gap-4 md:grid-cols-2">
                                             <div className="space-y-2">
                                                 <Label>First Name</Label>
-                                                <Input defaultValue="Chisom" />
+                                                <Input defaultValue={user.profile.firstName} onChange={(e) => updateProfile({ firstName: e.target.value })} />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label>Last Name</Label>
-                                                <Input defaultValue="Frank" />
+                                                <Input defaultValue={user.profile.lastName} onChange={(e) => updateProfile({ lastName: e.target.value })} />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label>Username</Label>
-                                                <Input defaultValue="@chisomfrank" />
+                                                <Input defaultValue={user.profile.username} onChange={(e) => updateProfile({ username: e.target.value })} />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label>Email</Label>
-                                                <Input defaultValue="chisom.frank@example.com" />
+                                                <Input defaultValue={user.profile.email} onChange={(e) => updateProfile({ email: e.target.value })} />
                                             </div>
                                         </div>
                                         <div className="space-y-2">
                                             <Label>Bio</Label>
-                                            <Input defaultValue="Tech enthusiast and gadget lover." />
+                                            <Input defaultValue={user.profile.bio} onChange={(e) => updateProfile({ bio: e.target.value })} />
                                         </div>
                                     </CardContent>
                                     <CardFooter className="justify-end border-t border-border/50 px-6 py-4">
@@ -489,7 +517,7 @@ interface AddressCardProps {
 }
 
 function AddressCard({ address, onEdit, onRemove, onSetDefault }: AddressCardProps) {
-    const { type, label, description, phone, isDefault } = address;
+    const { type, label, fullAddress, phone, isDefault } = address;
 
     return (
         <Card className={`relative overflow-hidden transition-all hover:border-primary/50 group ${isDefault ? 'border-primary/50 bg-primary/5' : ''}`}>
@@ -506,7 +534,9 @@ function AddressCard({ address, onEdit, onRemove, onSetDefault }: AddressCardPro
                 <div>
                     <h4 className="font-bold text-lg">{label}</h4>
                     <p className="text-muted-foreground text-sm mt-1 leading-relaxed">
-                        {description}
+                        <p className="text-muted-foreground text-sm mt-1 leading-relaxed">
+                            {fullAddress}
+                        </p>
                     </p>
                     <p className="text-sm font-medium mt-2 flex items-center gap-2">
                         <Smartphone className="w-3 h-3 text-muted-foreground" />

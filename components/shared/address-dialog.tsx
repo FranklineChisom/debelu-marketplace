@@ -8,15 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { MapPin, Briefcase, Home } from "lucide-react"
-
-export interface Address {
-    id: string;
-    type: "Home" | "Work" | "Other";
-    label: string;
-    description: string;
-    phone: string;
-    isDefault: boolean;
-}
+import { Address } from "@/types/user"
 
 interface AddressDialogProps {
     isOpen: boolean;
@@ -30,7 +22,7 @@ export function AddressDialog({ isOpen, onClose, onSave, initialData }: AddressD
         id: "",
         type: "Home",
         label: "",
-        description: "",
+        fullAddress: "",
         phone: "",
         isDefault: false
     };
@@ -94,8 +86,8 @@ export function AddressDialog({ isOpen, onClose, onSave, initialData }: AddressD
                         <Label>Full Address</Label>
                         <Input
                             placeholder="Street address, City, State"
-                            value={formData.description}
-                            onChange={(e) => handleChange("description", e.target.value)}
+                            value={formData.fullAddress}
+                            onChange={(e) => handleChange("fullAddress", e.target.value)}
                         />
                     </div>
 

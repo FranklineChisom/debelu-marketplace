@@ -8,10 +8,12 @@ import {
     Phone,
     Mail,
     ChevronDown,
-    ExternalLink
+    ExternalLink,
+    Package
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import {
     Accordion,
     AccordionContent,
@@ -81,7 +83,10 @@ export default function HelpSupportPage() {
                             <CardTitle className="text-lg">Vendor Guides</CardTitle>
                         </CardHeader>
                         <CardContent className="grid gap-4">
-                            <a href="#" className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors group">
+                            <div
+                                onClick={() => toast.info("Getting Started Guide coming soon!")}
+                                className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors group cursor-pointer"
+                            >
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
                                         <Book className="w-4 h-4 text-blue-600" />
@@ -92,8 +97,11 @@ export default function HelpSupportPage() {
                                     </div>
                                 </div>
                                 <ExternalLink className="w-4 h-4 text-muted-foreground" />
-                            </a>
-                            <a href="#" className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors group">
+                            </div>
+                            <div
+                                onClick={() => toast.info("Packaging Guidelines coming soon!")}
+                                className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors group cursor-pointer"
+                            >
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
                                         <Package className="w-4 h-4 text-green-600" />
@@ -104,7 +112,7 @@ export default function HelpSupportPage() {
                                     </div>
                                 </div>
                                 <ExternalLink className="w-4 h-4 text-muted-foreground" />
-                            </a>
+                            </div>
                         </CardContent>
                     </Card>
                 </motion.div>
@@ -119,15 +127,27 @@ export default function HelpSupportPage() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <Button variant="secondary" className="w-full justify-start gap-3">
+                            <Button
+                                variant="secondary"
+                                className="w-full justify-start gap-3"
+                                onClick={() => toast.success("Starting live chat...")}
+                            >
                                 <MessageCircle className="w-4 h-4" />
                                 Live Chat
                             </Button>
-                            <Button variant="secondary" className="w-full justify-start gap-3">
+                            <Button
+                                variant="secondary"
+                                className="w-full justify-start gap-3"
+                                onClick={() => toast.success("Email client opened!")}
+                            >
                                 <Mail className="w-4 h-4" />
                                 Email Support
                             </Button>
-                            <Button variant="secondary" className="w-full justify-start gap-3">
+                            <Button
+                                variant="secondary"
+                                className="w-full justify-start gap-3"
+                                onClick={() => toast.success("Calling support...")}
+                            >
                                 <Phone className="w-4 h-4" />
                                 Call Us
                             </Button>

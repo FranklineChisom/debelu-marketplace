@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn, formatNaira } from "@/lib/utils";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
+import { StatCard } from "@/components/vendor/StatCard";
 
 // Mock data
 const stats = [
@@ -78,28 +79,13 @@ export default function VendorDashboardPage() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.1 }}
                         >
-                            <Card className="border-foreground/10 hover:border-foreground/30 transition-colors">
-                                <CardContent className="p-5 lg:p-6 xl:p-8">
-                                    <div className="flex items-start justify-between mb-4">
-                                        <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
-                                            {stat.label}
-                                        </span>
-                                        <span className={cn(
-                                            "text-xs font-bold",
-                                            stat.trend === "up" ? "text-emerald-400" : "text-red-400"
-                                        )}>
-                                            {stat.trend === "up" ? "+" : ""}{stat.change}%
-                                        </span>
-                                    </div>
-                                    <p className="text-3xl lg:text-4xl xl:text-5xl font-black">
-                                        {stat.format === "currency"
-                                            ? formatNaira(stat.value)
-                                            : stat.format === "rating"
-                                                ? stat.value.toFixed(1)
-                                                : stat.value}
-                                    </p>
-                                </CardContent>
-                            </Card>
+                            <StatCard
+                                label={stat.label}
+                                value={stat.value}
+                                change={stat.change}
+                                trend={stat.trend as "up" | "down" | "neutral"}
+                                formatter={stat.format as any}
+                            />
                         </motion.div>
                     ))}
                 </motion.div>

@@ -6,16 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { CreditCard, Lock } from "lucide-react"
-
-export interface PaymentMethod {
-    id: string;
-    type: "Visa" | "Mastercard";
-    last4: string;
-    expiry: string;
-    cardHolder: string;
-    isDefault: boolean;
-    gradient?: string; // For visual flair
-}
+import { PaymentMethod } from "@/types/user"
 
 interface PaymentMethodDialogProps {
     isOpen: boolean;

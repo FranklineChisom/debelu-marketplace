@@ -36,80 +36,9 @@ import { cn, formatNaira, formatRelativeTime } from "@/lib/utils";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 import { ORDER_STATUSES, OrderStatus } from "@/lib/constants";
 
-// Mock orders
-const mockOrders = [
-    {
-        id: "1",
-        orderNumber: "DBL-XYZ789",
-        customerName: "Chioma Adebayo",
-        customerPhone: "08012345678",
-        customerAvatar: "CN",
-        items: [
-            { name: "Dell Inspiron 15 Laptop 3620", qty: 1, price: 165000 },
-            { name: "USB-C Hub", qty: 1, price: 12500 },
-        ],
-        total: 177500,
-        status: "pending" as OrderStatus,
-        createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-        deliveryAddress: "Moremi Hall, Room 234, UNILAG",
-        paymentMethod: "Bank Transfer"
-    },
-    {
-        id: "2",
-        orderNumber: "DBL-ABC123",
-        customerName: "Emeka Okonkwo",
-        customerPhone: "08198765432",
-        customerAvatar: "EO",
-        items: [{ name: "iPhone 12 Case", qty: 2, price: 9000 }],
-        total: 18000,
-        status: "confirmed" as OrderStatus,
-        createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-        deliveryAddress: "Jaja Hall, Block A, UNILAG",
-        paymentMethod: "Card"
-    },
-    {
-        id: "3",
-        orderNumber: "DBL-DEF456",
-        customerName: "Blessing Nwosu",
-        customerPhone: "07012345678",
-        customerAvatar: "BN",
-        items: [
-            { name: "Wireless Earbuds", qty: 1, price: 25000 },
-            { name: "Phone Stand", qty: 2, price: 3500 },
-        ],
-        total: 32000,
-        status: "processing" as OrderStatus,
-        createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-        deliveryAddress: "Eni Njoku Hall, UNILAG",
-        paymentMethod: "Wallet"
-    },
-    {
-        id: "4",
-        orderNumber: "DBL-GHI789",
-        customerName: "Tunde Bakare",
-        customerPhone: "09087654321",
-        customerAvatar: "TB",
-        items: [{ name: "MacBook Charger", qty: 1, price: 35000 }],
-        total: 35000,
-        status: "delivering" as OrderStatus,
-        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        deliveryAddress: "Faculty of Engineering, UNILAG",
-        paymentMethod: "Card"
-    },
-    {
-        id: "5",
-        orderNumber: "DBL-JKL012",
-        customerName: "Amina Aliyu",
-        customerPhone: "08156789012",
-        customerAvatar: "AA",
-        items: [{ name: "Laptop Bag", qty: 1, price: 15000 }],
-        total: 15000,
-        status: "delivered" as OrderStatus,
-        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        deliveryAddress: "Amina Hall, UNILAG",
-        paymentMethod: "Bank Transfer"
-    },
-];
+import { useMarketplaceStore } from "@/stores/useMarketplaceStore";
+
+
 
 const statusOrder: OrderStatus[] = [
     "pending",
@@ -132,13 +61,14 @@ const getStatusColor = (status: string) => {
 }
 
 export default function OrdersPage() {
+    const orders = useMarketplaceStore((state) => state.orders);
     const [search, setSearch] = useState("");
     const [view, setView] = useState<"kanban" | "list">("kanban");
 
-    const filteredOrders = mockOrders.filter((order) => {
+    const filteredOrders = orders.filter((order) => {
         const matchesSearch =
             order.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
-            order.customerName.toLowerCase().includes(search.toLowerCase());
+            order.buyerName.toLowerCase().includes(search.toLowerCase());
         return matchesSearch;
     });
 
@@ -146,7 +76,7 @@ export default function OrdersPage() {
     const ordersByStatus = statusOrder.reduce((acc, status) => {
         acc[status] = filteredOrders.filter((o) => o.status === status);
         return acc;
-    }, {} as Record<OrderStatus, typeof mockOrders>);
+    }, {} as Record<OrderStatus, typeof orders>);
 
     return (
         <motion.div
@@ -270,10 +200,12 @@ export default function OrdersPage() {
 
                             <div className="flex-1 flex items-center gap-3">
                                 <Avatar className="w-8 h-8 h-9 w-9 border border-border/50">
-                                    <AvatarFallback className="text-xs bg-primary/5 text-primary font-bold">{order.customerAvatar}</AvatarFallback>
+                                    <AvatarFallback className="text-xs bg-primary/5 text-primary font-bold">
+                                        {order.buyerName.charAt(0)}
+                                    </AvatarFallback>
                                 </Avatar>
                                 <div>
-                                    <p className="font-bold text-sm">{order.customerName}</p>
+                                    <p className="font-bold text-sm">{order.buyerName}</p>
                                     <p className="text-xs text-muted-foreground">{order.items.length} items • {formatNaira(order.total)}</p>
                                 </div>
                             </div>
@@ -281,7 +213,7 @@ export default function OrdersPage() {
                             <div className="md:w-64">
                                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                                     <MapPin className="w-3 h-3" />
-                                    {order.deliveryAddress}
+                                    {order.deliveryAddress.label} {/* Updated for DeliveryAddress object */}
                                 </p>
                             </div>
 
@@ -297,10 +229,12 @@ export default function OrdersPage() {
     );
 }
 
+import { Order } from "@/types/order";
+
 function KanbanCard({
     order,
 }: {
-    order: (typeof mockOrders)[0];
+    order: Order;
 }) {
     return (
         <Card className="hover:shadow-md transition-all cursor-pointer border-border/50 group bg-card">
@@ -316,17 +250,17 @@ function KanbanCard({
                 </div>
 
                 <div className="space-y-1">
-                    <p className="font-bold text-sm line-clamp-1 group-hover:text-primary transition-colors">{order.customerName}</p>
+                    <p className="font-bold text-sm line-clamp-1 group-hover:text-primary transition-colors">{order.buyerName}</p>
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                         <MapPin className="w-3 h-3" />
-                        <span className="line-clamp-1">{order.deliveryAddress}</span>
+                        <span className="line-clamp-1">{order.deliveryAddress.label}</span>
                     </p>
                 </div>
 
                 <div className="bg-muted/30 p-2 rounded-lg space-y-1">
                     {order.items.slice(0, 2).map((item, i) => (
                         <div key={i} className="flex justify-between text-xs">
-                            <span className="text-muted-foreground truncate max-w-[140px]">{item.qty}x {item.name}</span>
+                            <span className="text-muted-foreground truncate max-w-[140px]">{item.quantity}x {item.product.name}</span>
                         </div>
                     ))}
                     {order.items.length > 2 && (

@@ -7,6 +7,9 @@ import type { ProductSummary } from "./product";
 
 export interface OrderItem {
     id: string;
+    productId: string;
+    productName: string;
+    image: string;
     product: ProductSummary;
     quantity: number;
     price: number;

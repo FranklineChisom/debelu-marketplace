@@ -424,7 +424,6 @@ export default function LandingPage() {
               title: "The Tech Bro",
               subtitle: "Setups, Gadgets & Coffee",
               Component: SvgProgramming,
-              hex: "#06b6d4", // Cyan-500
               color: "from-blue-500/20 to-cyan-500/20",
               border: "border-blue-500/20"
             },
@@ -432,7 +431,6 @@ export default function LandingPage() {
               title: "The Fashionista",
               subtitle: "Fashion, Skincare & Glam",
               Component: SvgMakeupArtist,
-              hex: "#ec4899", // Pink-500
               color: "from-pink-500/20 to-rose-500/20",
               border: "border-pink-500/20"
             },
@@ -440,7 +438,6 @@ export default function LandingPage() {
               title: "The Foodie",
               subtitle: "Midnight Snacks & Meals",
               Component: SvgStreetFood,
-              hex: "#f97316", // Orange-500
               color: "from-orange-500/20 to-yellow-500/20",
               border: "border-orange-500/20"
             },
@@ -448,7 +445,6 @@ export default function LandingPage() {
               title: "The Scholar",
               subtitle: "Books, Lamps & Essentials",
               Component: SvgStudying,
-              hex: "#10b981", // Emerald-500
               color: "from-emerald-500/20 to-green-500/20",
               border: "border-emerald-500/20"
             },

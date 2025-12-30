@@ -369,23 +369,35 @@ export default function ProductDetailPage() {
 
                         {/* Vendor Card */}
                         <motion.div variants={fadeInUp}>
-                            <Card className="hover:border-primary/30 transition-colors group cursor-pointer bg-card/50">
-                                <CardContent className="p-4 flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                                        <Store className="w-6 h-6" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-bold">{mockProduct.vendorName}</h3>
-                                            <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-green-500/30 text-green-600 bg-green-500/5">Verified</Badge>
+                            <Link href={`/store/${mockProduct.vendorId}`}>
+                                <Card className="hover:border-primary/30 transition-colors group cursor-pointer bg-card/50">
+                                    <CardContent className="p-4 flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                                            <Store className="w-6 h-6" />
                                         </div>
-                                        <p className="text-sm text-muted-foreground">
-                                            {mockProduct.vendorSales} Sales • {mockProduct.vendorRating} Rating
-                                        </p>
-                                    </div>
-                                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                                </CardContent>
-                            </Card>
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="font-bold">{mockProduct.vendorName}</h3>
+                                                <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-green-500/30 text-green-600 bg-green-500/5">Verified</Badge>
+                                            </div>
+                                            <p className="text-sm text-muted-foreground">
+                                                {mockProduct.vendorSales} Sales • {mockProduct.vendorRating} Rating
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Button variant="secondary" size="sm" className="h-8" onClick={(e) => {
+                                                e.preventDefault();
+                                                // Handle chat navigation
+                                                router.push("/chat");
+                                            }}>
+                                                <MessageSquare className="w-4 h-4 mr-1.5" />
+                                                Chat
+                                            </Button>
+                                            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </Link>
                         </motion.div>
 
                         {/* Description */}

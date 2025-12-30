@@ -35,57 +35,7 @@ import {
 import { cn, formatNaira } from "@/lib/utils";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 
-// Mock products
-const mockProducts = [
-    {
-        id: "1",
-        name: "Dell Inspiron 15 Laptop 3620",
-        price: 165000,
-        stock: 5,
-        status: "active" as const,
-        image: null,
-        sales: 12,
-        views: 450,
-        category: "Electronics",
-        lastUpdated: "2 hours ago"
-    },
-    {
-        id: "2",
-        name: "iPhone 12 Case Bundle (5 colors)",
-        price: 9000,
-        stock: 45,
-        status: "active" as const,
-        image: null,
-        sales: 28,
-        views: 890,
-        category: "Accessories",
-        lastUpdated: "1 day ago"
-    },
-    {
-        id: "3",
-        name: "USB-C Hub 7-in-1",
-        price: 12500,
-        stock: 0,
-        status: "active" as const,
-        image: null,
-        sales: 45,
-        views: 1200,
-        category: "Electronics",
-        lastUpdated: "3 days ago"
-    },
-    {
-        id: "4",
-        name: "Wireless Earbuds Pro",
-        price: 25000,
-        stock: 15,
-        status: "draft" as const,
-        image: null,
-        sales: 0,
-        views: 0,
-        category: "Electronics",
-        lastUpdated: "1 week ago"
-    },
-];
+import { useMarketplaceStore } from "@/stores/useMarketplaceStore";
 
 type ProductStatus = "active" | "draft" | "archived";
 
@@ -96,11 +46,12 @@ const statusConfig: Record<ProductStatus, { label: string; variant: "success" | 
 };
 
 export default function ProductsPage() {
+    const products = useMarketplaceStore((state) => state.products);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<ProductStatus | "all">("all");
     const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
 
-    const filteredProducts = mockProducts.filter((product) => {
+    const filteredProducts = products.filter((product) => {
         const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase());
         const matchesStatus = statusFilter === "all" || product.status === statusFilter;
         return matchesSearch && matchesStatus;
@@ -159,10 +110,10 @@ export default function ProductsPage() {
             {/* Quick Stats Grid */}
             <motion.div variants={fadeInUp} className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                    { label: "Total Products", value: "45", icon: Box, color: "text-blue-500", bg: "bg-blue-500/10" },
-                    { label: "Active", value: "32", icon: Checkbox, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-                    { label: "Low Stock", value: "3", icon: ArrowUpDown, color: "text-amber-500", bg: "bg-amber-500/10" },
-                    { label: "Total Views", value: "12.5k", icon: Eye, color: "text-purple-500", bg: "bg-purple-500/10" },
+                    { label: "Total Products", value: products.length.toString(), icon: Box, color: "text-blue-500", bg: "bg-blue-500/10" },
+                    { label: "Active", value: products.filter(p => p.status === 'active').length.toString(), icon: Checkbox, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+                    { label: "Low Stock", value: products.filter(p => p.stock < 5).length.toString(), icon: ArrowUpDown, color: "text-amber-500", bg: "bg-amber-500/10" },
+                    { label: "Total Views", value: products.reduce((acc, p) => acc + p.views, 0).toLocaleString(), icon: Eye, color: "text-purple-500", bg: "bg-purple-500/10" },
                 ].map((stat, i) => (
                     <Card key={i} className="border-border/50 shadow-sm bg-card/50">
                         <CardContent className="p-4 flex items-center gap-4">
@@ -245,9 +196,9 @@ export default function ProductsPage() {
                                     </td>
                                     <td className="p-4">
                                         <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center overflow-hidden border border-border/50">
-                                            {product.image ? (
+                                            {product.images?.[0]?.url ? (
                                                 <Image
-                                                    src={product.image}
+                                                    src={product.images[0].url}
                                                     alt={product.name}
                                                     width={48}
                                                     height={48}
@@ -261,7 +212,7 @@ export default function ProductsPage() {
                                     <td className="p-4">
                                         <div className="flex flex-col">
                                             <span className="font-semibold truncate max-w-[200px]">{product.name}</span>
-                                            <span className="text-[10px] text-muted-foreground">Updated {product.lastUpdated}</span>
+                                            {/* <span className="text-[10px] text-muted-foreground">Updated {product.lastUpdated}</span> */}
                                         </div>
                                     </td>
                                     <td className="p-4 text-muted-foreground">{product.category}</td>
@@ -327,7 +278,7 @@ export default function ProductsPage() {
                 {/* Pagination (Mock) */}
                 <div className="border-t border-border/50 p-4 flex items-center justify-between text-xs text-muted-foreground">
                     <div>
-                        Showing <strong>1-{filteredProducts.length}</strong> of <strong>{mockProducts.length}</strong> products
+                        Showing <strong>1-{filteredProducts.length}</strong> of <strong>{products.length}</strong> products
                     </div>
                     <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" disabled>Previous</Button>
