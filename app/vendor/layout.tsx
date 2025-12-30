@@ -177,26 +177,50 @@ export default function VendorLayout({
                 {/* Sidebar Footer / User Profile */}
                 <div className="p-4 border-t border-border/50">
                     <div className={cn("flex items-center gap-3", isSidebarCollapsed ? "justify-center" : "")}>
-                        <Avatar className="w-10 h-10 border-2 border-background shadow-sm cursor-pointer hover:scale-105 transition-transform">
-                            <AvatarImage src="https://github.com/shadcn.png" />
-                            <AvatarFallback>TH</AvatarFallback>
-                        </Avatar>
-
-                        {!isSidebarCollapsed && (
-                            <div className="flex-1 overflow-hidden">
-                                <p className="font-bold text-sm truncate">TechHub NG</p>
-                                <p className="text-xs text-muted-foreground truncate">connector@debelu.ng</p>
-                            </div>
-                        )}
-
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="hidden lg:flex w-8 h-8 rounded-lg ml-auto text-muted-foreground hover:text-foreground"
-                            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                        >
-                            <ChevronLeft className={cn("w-4 h-4 transition-transform", isSidebarCollapsed && "rotate-180")} />
-                        </Button>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="p-0 h-auto hover:bg-transparent outline-none">
+                                    <Avatar className="w-10 h-10 border-2 border-background shadow-sm cursor-pointer hover:scale-105 transition-transform">
+                                        <AvatarImage src="https://github.com/shadcn.png" />
+                                        <AvatarFallback>TH</AvatarFallback>
+                                    </Avatar>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56" forceMount>
+                                <DropdownMenuLabel className="font-normal">
+                                    <div className="flex flex-col space-y-1">
+                                        <p className="text-sm font-medium leading-none">TechHub NG</p>
+                                        <p className="text-xs leading-none text-muted-foreground">
+                                            connector@debelu.ng
+                                        </p>
+                                    </div>
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem asChild>
+                                    <Link href="/vendor/settings/store">
+                                        <User className="mr-2 h-4 w-4" />
+                                        <span>Store Profile</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <Link href="/vendor/settings">
+                                        <Settings className="mr-2 h-4 w-4" />
+                                        <span>Settings</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <Link href="/vendor/help">
+                                        <HelpCircle className="mr-2 h-4 w-4" />
+                                        <span>Help & Support</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-destructive focus:text-destructive">
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    <span>Log out</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
             </motion.aside>
@@ -241,10 +265,50 @@ export default function VendorLayout({
                             <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-destructive rounded-full ring-2 ring-background" />
                         </Button>
 
-                        <Avatar className="w-8 h-8 lg:hidden">
-                            <AvatarImage src="https://github.com/shadcn.png" />
-                            <AvatarFallback>TH</AvatarFallback>
-                        </Avatar>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="p-0 h-auto hover:bg-transparent rounded-full lg:hidden">
+                                    <Avatar className="w-8 h-8">
+                                        <AvatarImage src="https://github.com/shadcn.png" />
+                                        <AvatarFallback>TH</AvatarFallback>
+                                    </Avatar>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56" forceMount>
+                                <DropdownMenuLabel className="font-normal">
+                                    <div className="flex flex-col space-y-1">
+                                        <p className="text-sm font-medium leading-none">TechHub NG</p>
+                                        <p className="text-xs leading-none text-muted-foreground">
+                                            connector@debelu.ng
+                                        </p>
+                                    </div>
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem asChild>
+                                    <Link href="/vendor/settings/store">
+                                        <User className="mr-2 h-4 w-4" />
+                                        <span>Store Profile</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <Link href="/vendor/settings">
+                                        <Settings className="mr-2 h-4 w-4" />
+                                        <span>Settings</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <Link href="/vendor/help">
+                                        <HelpCircle className="mr-2 h-4 w-4" />
+                                        <span>Help & Support</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-destructive focus:text-destructive">
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    <span>Log out</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </header>
 
