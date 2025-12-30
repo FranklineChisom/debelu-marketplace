@@ -1,5 +1,6 @@
 "use client";
 
+import { use } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
@@ -17,33 +18,97 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { cn, formatNaira, formatRelativeTime } from "@/lib/utils";
+import { cn, formatNaira } from "@/lib/utils";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 
-// Mock order data
-const mockOrder = {
-    id: "1",
-    orderNumber: "DBL-ABC123-XYZ",
-    status: "delivering" as keyof typeof statusConfig,
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    items: [
-        { name: "Dell Inspiron 15 Laptop", qty: 1, price: 165000, image: null },
-        { name: "USB-C Hub 7-in-1", qty: 1, price: 12500, image: null },
-    ],
-    subtotal: 177500,
-    deliveryFee: 500,
-    total: 178000,
-    vendorName: "TechHub NG",
-    vendorPhone: "08012345678",
-    deliveryAddress: "Moremi Hall, Room 234, UNILAG",
-    estimatedDelivery: "Today, 5:00 PM - 6:00 PM",
-    statusHistory: [
-        { status: "pending", time: "2:30 PM", message: "Order placed" },
-        { status: "confirmed", time: "2:35 PM", message: "Order confirmed by vendor" },
-        { status: "processing", time: "3:00 PM", message: "Preparing your order" },
-        { status: "delivering", time: "4:15 PM", message: "Out for delivery" },
-    ],
-};
+// Mock orders data - Expanded for detail view
+const mockOrders = [
+    {
+        id: "1",
+        orderNumber: "DBL-ABC123",
+        status: "delivered" as const,
+        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        subtotal: 177500,
+        deliveryFee: 500,
+        total: 178000,
+        vendorName: "Campus Tech Hub",
+        vendorPhone: "08012345678",
+        deliveryAddress: "Moremi Hall, Room 234, UNILAG",
+        estimatedDelivery: "Delivered on Dec 28, 2025",
+        items: [
+            { name: "Dell Inspiron 15 Laptop", qty: 1, price: 165000 },
+            { name: "USB-C Hub 7-in-1", qty: 1, price: 12500 },
+        ],
+        statusHistory: [
+            { status: "pending", time: "2:30 PM, Dec 26", message: "Order placed" },
+            { status: "confirmed", time: "2:35 PM, Dec 26", message: "Order confirmed by vendor" },
+            { status: "processing", time: "3:00 PM, Dec 26", message: "Preparing your order" },
+            { status: "delivering", time: "4:15 PM, Dec 27", message: "Out for delivery" },
+            { status: "delivered", time: "10:00 AM, Dec 28", message: "Delivered to Moremi Hall" },
+        ],
+    },
+    {
+        id: "2",
+        orderNumber: "DBL-XYZ789",
+        status: "delivering" as const,
+        createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+        subtotal: 45000,
+        deliveryFee: 500,
+        total: 45500,
+        vendorName: "Gadget World",
+        vendorPhone: "08098765432",
+        deliveryAddress: "Faculty of Engineering, UNILAG",
+        estimatedDelivery: "Today, 5:00 PM - 6:00 PM",
+        items: [
+            { name: "iPhone 12 Case Bundle", qty: 1, price: 45000 },
+        ],
+        statusHistory: [
+            { status: "pending", time: "10:30 AM", message: "Order placed" },
+            { status: "confirmed", time: "10:45 AM", message: "Vendor confirmed" },
+            { status: "processing", time: "11:00 AM", message: "Packed and ready" },
+            { status: "delivering", time: "1:15 PM", message: "Rider picked up order" },
+        ],
+    },
+    {
+        id: "3",
+        orderNumber: "DBL-DEF456",
+        status: "pending" as const,
+        createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+        subtotal: 12500,
+        deliveryFee: 500,
+        total: 13000,
+        vendorName: "Techno Accessories",
+        vendorPhone: "08123456789",
+        deliveryAddress: "Jaja Hall, Room A12, UNILAG",
+        estimatedDelivery: "Tomorrow, 10:00 AM",
+        items: [
+            { name: "USB-C Hub", qty: 1, price: 12500 },
+        ],
+        statusHistory: [
+            { status: "pending", time: "Just now", message: "Order placed" },
+        ],
+    },
+    {
+        id: "4",
+        orderNumber: "DBL-CAN999",
+        status: "cancelled" as const,
+        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        subtotal: 5500,
+        deliveryFee: 0,
+        total: 5500,
+        vendorName: "Gadget World",
+        vendorPhone: "08098765432",
+        deliveryAddress: "Faculty of Arts, UNILAG",
+        estimatedDelivery: "Cancelled",
+        items: [
+            { name: "Screen Protector", qty: 2, price: 2750 },
+        ],
+        statusHistory: [
+            { status: "pending", time: "9:00 AM, Dec 20", message: "Order placed" },
+            { status: "cancelled", time: "9:30 AM, Dec 20", message: "Order cancelled by user" },
+        ],
+    },
+];
 
 const statusConfig = {
     pending: { label: "Pending", icon: Clock, color: "warning" },
@@ -56,13 +121,15 @@ const statusConfig = {
 
 const statusOrder = ["pending", "confirmed", "processing", "delivering", "delivered"];
 
-export default function OrderDetailPage() {
+export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params);
     const router = useRouter();
-    const currentStatusIndex = statusOrder.indexOf(mockOrder.status);
+
+    const order = mockOrders.find((o) => o.id === id) || mockOrders[0];
+    const currentStatusIndex = statusOrder.indexOf(order.status);
 
     const handleCopyOrderNumber = () => {
-        navigator.clipboard.writeText(mockOrder.orderNumber);
-        // Could add toast here
+        navigator.clipboard.writeText(order.orderNumber);
     };
 
     return (
@@ -95,20 +162,20 @@ export default function OrderDetailPage() {
                                     className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
                                 >
                                     <span className="font-mono text-sm">
-                                        #{mockOrder.orderNumber}
+                                        #{order.orderNumber}
                                     </span>
                                     <Copy className="w-3 h-3" />
                                 </button>
                                 <Badge
                                     variant={
-                                        mockOrder.status === "delivered"
+                                        order.status === "delivered"
                                             ? "success"
-                                            : mockOrder.status === "cancelled"
+                                            : order.status === "cancelled"
                                                 ? "destructive"
                                                 : "default"
                                     }
                                 >
-                                    {statusConfig[mockOrder.status].label}
+                                    {statusConfig[order.status].label}
                                 </Badge>
                             </div>
 
@@ -124,7 +191,7 @@ export default function OrderDetailPage() {
                                 <div className="relative flex justify-between">
                                     {statusOrder.map((status, i) => {
                                         const isActive = i <= currentStatusIndex;
-                                        const isCurrent = status === mockOrder.status;
+                                        const isCurrent = status === order.status;
                                         return (
                                             <div key={status} className="flex flex-col items-center">
                                                 <div
@@ -157,14 +224,14 @@ export default function OrderDetailPage() {
                 </motion.div>
 
                 {/* Estimated Delivery */}
-                {mockOrder.status !== "delivered" && mockOrder.status !== "cancelled" && (
+                {order.status !== "delivered" && order.status !== "cancelled" && (
                     <motion.div variants={fadeInUp}>
                         <div className="flex items-center gap-3 p-4 rounded-xl bg-primary/10 border border-primary/20">
                             <Truck className="w-5 h-5 text-primary" />
                             <div>
                                 <p className="font-medium text-sm">Estimated Delivery</p>
                                 <p className="text-xs text-muted-foreground">
-                                    {mockOrder.estimatedDelivery}
+                                    {order.estimatedDelivery}
                                 </p>
                             </div>
                         </div>
@@ -174,11 +241,11 @@ export default function OrderDetailPage() {
                 {/* Items */}
                 <motion.div variants={fadeInUp}>
                     <h2 className="font-display font-bold mb-3">
-                        Items ({mockOrder.items.length})
+                        Items ({order.items.length})
                     </h2>
                     <Card>
                         <CardContent className="p-0 divide-y">
-                            {mockOrder.items.map((item, i) => (
+                            {order.items.map((item, i) => (
                                 <div key={i} className="flex items-center gap-3 p-4">
                                     <div className="w-14 h-14 rounded-xl bg-muted flex-shrink-0 flex items-center justify-center text-xs text-muted-foreground">
                                         No img
@@ -207,7 +274,7 @@ export default function OrderDetailPage() {
                         <CardContent className="p-4">
                             <div className="flex items-start gap-3">
                                 <MapPin className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                                <p className="text-sm">{mockOrder.deliveryAddress}</p>
+                                <p className="text-sm">{order.deliveryAddress}</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -224,7 +291,7 @@ export default function OrderDetailPage() {
                                         <Store className="w-5 h-5 text-primary-foreground" />
                                     </div>
                                     <span className="font-medium text-sm">
-                                        {mockOrder.vendorName}
+                                        {order.vendorName}
                                     </span>
                                 </div>
                                 <div className="flex gap-2">
@@ -247,15 +314,15 @@ export default function OrderDetailPage() {
                         <CardContent className="p-4 space-y-2">
                             <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Subtotal</span>
-                                <span>{formatNaira(mockOrder.subtotal)}</span>
+                                <span>{formatNaira(order.subtotal)}</span>
                             </div>
                             <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Delivery</span>
-                                <span>{formatNaira(mockOrder.deliveryFee)}</span>
+                                <span>{formatNaira(order.deliveryFee)}</span>
                             </div>
                             <div className="flex justify-between font-bold text-base pt-2 border-t">
                                 <span>Total</span>
-                                <span>{formatNaira(mockOrder.total)}</span>
+                                <span>{formatNaira(order.total)}</span>
                             </div>
                         </CardContent>
                     </Card>
@@ -267,18 +334,18 @@ export default function OrderDetailPage() {
                     <Card>
                         <CardContent className="p-4">
                             <div className="space-y-4">
-                                {mockOrder.statusHistory.map((entry, i) => (
+                                {order.statusHistory.map((entry, i) => (
                                     <div key={i} className="flex gap-3">
                                         <div className="relative flex flex-col items-center">
                                             <div
                                                 className={cn(
                                                     "w-3 h-3 rounded-full",
-                                                    i === mockOrder.statusHistory.length - 1
+                                                    i === order.statusHistory.length - 1
                                                         ? "bg-primary"
                                                         : "bg-muted"
                                                 )}
                                             />
-                                            {i < mockOrder.statusHistory.length - 1 && (
+                                            {i < order.statusHistory.length - 1 && (
                                                 <div className="w-px flex-1 bg-muted" />
                                             )}
                                         </div>

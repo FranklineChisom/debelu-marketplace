@@ -102,8 +102,11 @@ export interface ProductSummary {
     compareAtPrice?: number;
     image: string;
     vendorName: string;
+    vendorId: string;
     rating: number;
     reviewCount: number;
     stock: number;
+    category?: string;
     campusId: string;
+    attributes?: Record<string, string | number>;
 }

@@ -25,6 +25,7 @@ interface CartStore {
     removeItem: (productId: string, variant?: Record<string, string>) => void;
     updateQuantity: (productId: string, quantity: number, variant?: Record<string, string>) => void;
     clearCart: () => void;
+    populateWithMockData: () => void;
 
     // Helpers
     getItemCount: () => number;
@@ -102,6 +103,45 @@ export const useCartStore = create<CartStore>()(
             },
 
             clearCart: () => set({ items: [] }),
+
+            populateWithMockData: () => {
+                set({
+                    items: [
+                        {
+                            product: {
+                                id: "mock-1",
+                                name: "Dell Inspiron 15 3000 Series",
+                                price: 165000,
+                                vendorName: "Campus Tech Hub",
+                                image: "/images/laptop.png",
+                                rating: 4.8,
+                                reviewCount: 124,
+                                stock: 10,
+                                vendorId: "v-1",
+                                campusId: "c-1",
+                            },
+                            quantity: 1,
+                            addedAt: new Date().toISOString()
+                        },
+                        {
+                            product: {
+                                id: "mock-2",
+                                name: "Wireless Noise Cancelling Headphones",
+                                price: 45000,
+                                vendorName: "Gadget World",
+                                image: "/images/headphones.png",
+                                rating: 4.5,
+                                reviewCount: 89,
+                                stock: 15,
+                                vendorId: "v-2",
+                                campusId: "c-1",
+                            },
+                            quantity: 1,
+                            addedAt: new Date().toISOString()
+                        }
+                    ]
+                });
+            },
 
             getItemCount: () => {
                 return get().items.reduce((sum, item) => sum + item.quantity, 0);

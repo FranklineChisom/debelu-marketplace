@@ -17,7 +17,8 @@ export type MessageType =
     | "order-status"
     | "quick-actions"
     | "typing"
-    | "error";
+    | "error"
+    | "invoice";
 
 export interface ChatMessage {
     id: string;

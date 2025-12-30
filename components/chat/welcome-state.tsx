@@ -1,17 +1,23 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { MessageSquare, Sparkles } from "lucide-react";
 import { useChatStore, useUIStore } from "@/stores";
-import { CHAT_SUGGESTIONS, PRODUCT_CATEGORIES } from "@/lib/constants";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
+import { Laptop, Package, Truck } from "lucide-react";
 
 export function WelcomeState() {
     const addUserMessage = useChatStore((state) => state.addUserMessage);
     const selectedCampus = useUIStore((state) => state.selectedCampus);
 
-    const handleSuggestionClick = (suggestion: string) => {
-        addUserMessage(suggestion);
+    const router = useRouter();
+
+    const handleActionClick = (action: any) => {
+        if (action.path) {
+            router.push(action.path);
+        } else {
+            addUserMessage(action.query);
+        }
     };
 
     return (
@@ -21,66 +27,46 @@ export function WelcomeState() {
             animate="animate"
             className="text-center py-8"
         >
-            {/* Welcome Icon */}
-            <motion.div
-                variants={fadeInUp}
-                className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-primary/10 flex items-center justify-center"
-            >
-                <MessageSquare className="w-8 h-8 text-primary" />
-            </motion.div>
-
             {/* Welcome Text */}
-            <motion.div variants={fadeInUp} className="mb-8">
-                <h2 className="font-display text-2xl font-bold mb-2">
-                    Hey! 👋
+            <motion.div variants={fadeInUp} className="mb-10 mt-12">
+                <h2 className="font-display text-4xl font-bold mb-3 text-foreground tracking-tight">
+                    Good afternoon, Frankline.
                 </h2>
-                <p className="text-muted-foreground max-w-sm mx-auto">
-                    I'm Debi, your shopping assistant. Tell me what you're looking for
-                    and I'll find it on your campus.
+                <p className="text-xl text-muted-foreground font-light">
+                    How can I help you today?
                 </p>
             </motion.div>
 
-            {/* Try These */}
-            <motion.div variants={fadeInUp} className="mb-6">
-                <div className="flex items-center justify-center gap-2 mb-3">
-                    <Sparkles className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Try asking for:</span>
-                </div>
-                <div className="flex flex-wrap justify-center gap-2">
-                    {CHAT_SUGGESTIONS.slice(0, 6).map((suggestion, i) => (
-                        <motion.button
-                            key={suggestion}
-                            variants={fadeInUp}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => handleSuggestionClick(suggestion)}
-                            className="px-4 py-2 bg-muted hover:bg-muted/80 rounded-full text-sm font-medium transition-colors"
-                        >
-                            {suggestion}
-                        </motion.button>
-                    ))}
-                </div>
+            {/* Quick Actions */}
+            <motion.div variants={fadeInUp} className="flex flex-wrap justify-center gap-3 max-w-2xl mx-auto">
+                {[
+                    { label: "Find a laptop", icon: Laptop, query: "I'm looking for a laptop" },
+                    { label: "Track my order", icon: Package, query: "Track my recent order", path: "/orders" },
+                    { label: "Campus delivery", icon: Truck, query: "How does campus delivery work?" },
+                ].map((action) => (
+                    <motion.button
+                        key={action.label}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleActionClick(action)}
+                        className="flex items-center gap-2 px-6 py-3 bg-background border border-border/50 hover:border-primary/50 hover:bg-muted/30 rounded-full shadow-sm hover:shadow-md transition-all duration-300"
+                    >
+                        <action.icon className="w-5 h-5 text-primary" />
+                        <span className="font-medium text-foreground/80">{action.label}</span>
+                    </motion.button>
+                ))}
             </motion.div>
 
-            {/* Or Browse Categories */}
-            <motion.div variants={fadeInUp}>
-                <span className="text-sm text-muted-foreground mb-3 block">
-                    Or browse by category:
-                </span>
-                <div className="flex flex-wrap justify-center gap-2">
-                    {PRODUCT_CATEGORIES.slice(0, 5).map((category) => (
-                        <motion.button
-                            key={category.id}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => handleSuggestionClick(category.name)}
-                            className="flex items-center gap-2 px-4 py-2 bg-background border rounded-full text-sm hover:border-primary/50 transition-colors"
-                        >
-                            <span>{category.emoji}</span>
-                            <span>{category.name}</span>
-                        </motion.button>
-                    ))}
-                </div>
+            <motion.div variants={fadeInUp} className="mt-12">
+                <button
+                    onClick={() => {
+                        useChatStore.getState().populateWithMockData();
+                        window.location.reload(); // Force reload to see changes immediately
+                    }}
+                    className="text-xs text-muted-foreground hover:text-primary transition-colors underline"
+                >
+                    Don't see any data? Start Demo Chat
+                </button>
             </motion.div>
         </motion.div>
     );

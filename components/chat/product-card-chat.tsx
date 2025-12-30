@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import Image from "next/image";
 import { Star, Plus, MessageCircle, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
@@ -7,7 +8,7 @@ import { cn, formatNaira } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { ProductSummary } from "@/types";
-import { useCartStore } from "@/stores";
+import { useCartStore, useChatStore } from "@/stores";
 
 interface ProductCardChatProps {
     product: ProductSummary;
@@ -17,9 +18,17 @@ interface ProductCardChatProps {
 export function ProductCardChat({ product, expanded = false }: ProductCardChatProps) {
     const addItem = useCartStore((state) => state.addItem);
     const isInCart = useCartStore((state) => state.isInCart(product.id));
+    const setSelectedProduct = useChatStore((state) => state.setSelectedProduct);
+    const selectedProduct = useChatStore((state) => state.selectedProduct);
+    const isSelected = selectedProduct?.id === product.id;
 
-    const handleAddToCart = () => {
+    const handleAddToCart = (e: React.MouseEvent) => {
+        e.stopPropagation();
         addItem(product);
+    };
+
+    const handleCardClick = () => {
+        setSelectedProduct(product);
     };
 
     const hasDiscount = product.compareAtPrice && product.compareAtPrice > product.price;
@@ -32,7 +41,13 @@ export function ProductCardChat({ product, expanded = false }: ProductCardChatPr
             <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-background border rounded-2xl overflow-hidden max-w-sm"
+                className={cn(
+                    "bg-background border rounded-2xl overflow-hidden max-w-sm cursor-pointer transition-all duration-300",
+                    isSelected
+                        ? "ring-2 ring-primary shadow-xl scale-[1.02] border-primary"
+                        : "hover:border-primary/50"
+                )}
+                onClick={handleCardClick}
             >
                 {/* Image */}
                 <div className="relative aspect-square bg-muted">
@@ -59,7 +74,9 @@ export function ProductCardChat({ product, expanded = false }: ProductCardChatPr
                 <div className="p-4 space-y-3">
                     <div>
                         <h3 className="font-semibold text-base line-clamp-2">{product.name}</h3>
-                        <p className="text-sm text-muted-foreground">{product.vendorName}</p>
+                        <Link href={`/vendor/${product.vendorId || '1'}`} className="text-sm text-muted-foreground hover:text-primary hover:underline transition-colors block w-fit">
+                            {product.vendorName}
+                        </Link>
                     </div>
 
                     {/* Rating */}
@@ -120,7 +137,13 @@ export function ProductCardChat({ product, expanded = false }: ProductCardChatPr
         <motion.div
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="flex-shrink-0 w-36 bg-background border rounded-xl p-3 cursor-pointer"
+            className={cn(
+                "flex-shrink-0 w-36 bg-background border rounded-xl p-3 cursor-pointer transition-all duration-300",
+                isSelected
+                    ? "ring-2 ring-primary shadow-lg border-primary"
+                    : ""
+            )}
+            onClick={handleCardClick}
         >
             {/* Image */}
             <div className="relative aspect-square bg-muted rounded-lg mb-2 overflow-hidden">

@@ -37,6 +37,10 @@ interface UIStore {
     toasts: Toast[];
     addToast: (toast: Omit<Toast, "id">) => void;
     removeToast: (id: string) => void;
+
+    // Verification flow
+    verificationValues: { email: string; phone: string } | null;
+    setVerificationValues: (values: { email: string; phone: string } | null) => void;
 }
 
 interface Toast {
@@ -100,6 +104,10 @@ export const useUIStore = create<UIStore>((set, get) => ({
             toasts: state.toasts.filter((t) => t.id !== id),
         }));
     },
+
+    // Verification
+    verificationValues: null,
+    setVerificationValues: (values) => set({ verificationValues: values }),
 }));
 
 // Initialize campus from localStorage on client

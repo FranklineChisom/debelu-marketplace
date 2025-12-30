@@ -111,6 +111,7 @@ export default function ProductDetailPage() {
                 reviewCount: mockProduct.reviewCount,
                 stock: mockProduct.stock,
                 campusId: mockProduct.campusId,
+                vendorId: mockProduct.vendorId,
             },
             quantity
         );

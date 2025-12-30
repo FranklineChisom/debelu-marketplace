@@ -83,23 +83,24 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+import { Toaster } from "@/components/ui/sonner";
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${manrope.variable}`}>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body
-        className={`${inter.variable} ${manrope.variable} font-sans antialiased`}
-      >
+      <body className="font-sans antialiased text-foreground bg-background">
         <Providers>
           {children}
+          <Toaster />
         </Providers>
       </body>
     </html>

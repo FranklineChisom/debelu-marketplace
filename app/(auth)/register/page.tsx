@@ -4,11 +4,23 @@ import { useState, Suspense } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, EyeOff, ArrowRight, ArrowLeft, ShoppingBag, Store, Check, User, Phone, Mail, Lock, Search } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { toast } from "sonner";
+import { ArrowRight, Check, Search, ArrowLeft, User, MessageSquare, Briefcase, Building, Store, Mail, Phone, Lock, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
 import { cn } from "@/lib/utils";
 import { CAMPUSES } from "@/lib/constants";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
@@ -17,41 +29,57 @@ import { useUIStore } from "@/stores";
 type Step = "role" | "campus" | "details";
 type Role = "buyer" | "vendor";
 
+const registerSchema = z.object({
+    name: z.string().min(2, "Name must be at least 2 characters"),
+    phone: z.string().min(10, "Phone number must be valid"),
+    email: z.string().email("Please enter a valid email").optional().or(z.literal("")),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    terms: z.boolean().refine((val) => val === true, "You must agree to the terms"),
+});
+
+type RegisterFormValues = z.infer<typeof registerSchema>;
+
+const stepVariants = {
+    initial: { opacity: 0, x: 20 },
+    animate: {
+        opacity: 1,
+        x: 0,
+        transition: {
+            staggerChildren: 0.1
+        }
+    },
+    exit: { opacity: 0, x: -20, transition: { duration: 0.2 } }
+};
+
 function RegisterForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const setSelectedCampus = useUIStore((state) => state.setSelectedCampus);
+    const { setVerificationValues } = useUIStore();
 
-    const initialRole = searchParams.get("role") as Role | null;
-
-    const [step, setStep] = useState<Step>(initialRole ? "campus" : "role");
-    const [role, setRole] = useState<Role>(initialRole || "buyer");
+    const [step, setStep] = useState<Step>("role");
+    const [role, setRole] = useState<"buyer" | "vendor">("buyer");
     const [campus, setCampus] = useState<string>("");
     const [campusSearch, setCampusSearch] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+
+    // Form definition
+    const form = useForm<RegisterFormValues>({
+        resolver: zodResolver(registerSchema),
+        defaultValues: {
+            name: "",
+            phone: "",
+            email: "",
+            password: "",
+            terms: false,
+        },
+    });
 
     const filteredCampuses = CAMPUSES.filter(
         (c) =>
             c.name.toLowerCase().includes(campusSearch.toLowerCase()) ||
             c.shortName.toLowerCase().includes(campusSearch.toLowerCase())
     );
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsLoading(true);
-
-        // Save campus selection
-        if (campus) {
-            setSelectedCampus(campus as any);
-        }
-
-        // Simulate registration
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-
-        // Redirect based on role
-        router.push(role === "vendor" ? "/vendor/dashboard" : "/chat");
-    };
 
     const goBack = () => {
         if (step === "details") setStep("campus");
@@ -61,18 +89,46 @@ function RegisterForm() {
     // Step Progress Indicator
     const stepNumber = step === "role" ? 1 : step === "campus" ? 2 : 3;
 
+    const onSubmit = async (values: RegisterFormValues) => {
+        setIsLoading(true);
+
+        // Simulate API call with toast promise
+        toast.promise(
+            new Promise((resolve) => setTimeout(resolve, 2000)),
+            {
+                loading: 'Creating your account...',
+                success: () => {
+                    // Store values for verification
+                    setVerificationValues({
+                        email: values.email || "",
+                        phone: values.phone,
+                    });
+
+                    setTimeout(() => {
+                        router.push("/verify");
+                    }, 1000);
+
+                    return `Welcome to Debelu, ${values.name.split(' ')[0]}!`;
+                },
+                error: 'Something went wrong. Please try again.',
+            }
+        );
+
+        setIsLoading(false);
+    };
+
     return (
         <motion.div
             variants={staggerContainer}
             initial="initial"
             animate="animate"
-            className="space-y-6"
+            className="space-y-4"
         >
             {/* Progress Indicator */}
             {step !== "role" && (
                 <motion.div
                     variants={fadeInUp}
-                    className="flex items-center justify-center gap-2 mb-4"
+                    className="flex items-center justify-center gap-2 mb-2"
                 >
                     {[1, 2, 3].map((num) => (
                         <div key={num} className="flex items-center">
@@ -120,32 +176,39 @@ function RegisterForm() {
                 {step === "role" && (
                     <motion.div
                         key="role"
-                        variants={staggerContainer}
+                        variants={{
+                            initial: { opacity: 0, x: 20 },
+                            animate: { opacity: 1, x: 0 },
+                            exit: { opacity: 0, x: -20 }
+                        }}
                         initial="initial"
                         animate="animate"
-                        exit={{ opacity: 0, x: -20 }}
-                        className="space-y-6"
+                        exit="exit"
+                        className="space-y-4 pt-20 lg:pt-32"
                     >
-                        <motion.div variants={fadeInUp} className="text-center space-y-4">
+                        <motion.div variants={fadeInUp} className="text-center space-y-1">
                             <h1 className="font-display text-4xl lg:text-5xl font-black tracking-tighter">
                                 Join Debelu.
                             </h1>
                             <p className="text-muted-foreground text-lg">
                                 How would you like to use Debelu?
                             </p>
+                            <p className="text-xs text-muted-foreground/60 font-medium pt-2">
+                                (You can use one account for both buying and selling)
+                            </p>
                         </motion.div>
 
-                        <motion.div variants={fadeInUp} className="space-y-4">
+                        <motion.div variants={fadeInUp} className="space-y-3">
                             <button
                                 onClick={() => {
                                     setRole("buyer");
                                     setStep("campus");
                                 }}
-                                className="w-full group relative overflow-hidden rounded-3xl bg-foreground text-background p-8 lg:p-10 text-left transition-all duration-500 hover:scale-[1.02]"
+                                className="w-full group relative overflow-hidden rounded-3xl bg-foreground text-background p-6 lg:p-8 text-left transition-all duration-500 hover:scale-[1.02]"
                             >
                                 <div className="relative z-10 flex items-center justify-between">
                                     <div>
-                                        <h3 className="font-display text-4xl lg:text-5xl font-black tracking-tighter uppercase mb-2">
+                                        <h3 className="font-display text-4xl lg:text-5xl font-black tracking-tighter uppercase mb-1">
                                             Shop
                                         </h3>
                                         <p className="text-white/60 text-lg max-w-xs font-medium">
@@ -162,11 +225,11 @@ function RegisterForm() {
                                     setRole("vendor");
                                     setStep("campus");
                                 }}
-                                className="w-full group relative overflow-hidden rounded-3xl border-2 border-foreground/10 hover:border-foreground bg-transparent p-8 lg:p-10 text-left transition-all duration-500 hover:bg-foreground hover:text-background"
+                                className="w-full group relative overflow-hidden rounded-2xl border-2 border-foreground/10 hover:border-foreground bg-transparent p-6 lg:p-8 text-left transition-all duration-500 hover:bg-foreground hover:text-background"
                             >
                                 <div className="relative z-10 flex items-center justify-between">
                                     <div>
-                                        <h3 className="font-display text-4xl lg:text-5xl font-black tracking-tighter uppercase mb-2">
+                                        <h3 className="font-display text-4xl lg:text-5xl font-black tracking-tighter uppercase mb-1">
                                             Sell
                                         </h3>
                                         <p className="text-muted-foreground group-hover:text-white/60 text-lg max-w-xs font-medium transition-colors">
@@ -180,7 +243,7 @@ function RegisterForm() {
 
                         <motion.p
                             variants={fadeInUp}
-                            className="text-center text-sm text-muted-foreground"
+                            className="text-center text-sm text-muted-foreground pt-20"
                         >
                             Already have an account?{" "}
                             <Link href="/login" className="font-semibold text-primary hover:text-primary/80 transition-colors">
@@ -194,17 +257,21 @@ function RegisterForm() {
                 {step === "campus" && (
                     <motion.div
                         key="campus"
-                        variants={staggerContainer}
-                        initial={{ opacity: 0, x: 20 }}
+                        variants={{
+                            initial: { opacity: 0, x: 20 },
+                            animate: { opacity: 1, x: 0 },
+                            exit: { opacity: 0, x: -20 }
+                        }}
+                        initial="initial"
                         animate="animate"
-                        exit={{ opacity: 0, x: -20 }}
+                        exit="exit"
                         className="space-y-6"
                     >
-                        <motion.div variants={fadeInUp} className="text-center space-y-4">
-                            <h1 className="font-display text-4xl lg:text-5xl font-black tracking-tighter">
-                                Select your campus
+                        <motion.div variants={fadeInUp} className="text-center space-y-2">
+                            <h1 className="font-display text-3xl lg:text-4xl font-black tracking-tighter">
+                                Select your campus.
                             </h1>
-                            <p className="text-muted-foreground text-lg">
+                            <p className="text-muted-foreground text-base">
                                 This helps us show you relevant products
                             </p>
                         </motion.div>
@@ -221,27 +288,27 @@ function RegisterForm() {
                                 />
                             </div>
 
-                            <div className="max-h-56 overflow-y-auto space-y-2 scrollbar-thin rounded-xl">
+                            <div className="max-h-[300px] overflow-y-auto space-y-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] rounded-xl">
                                 {filteredCampuses.map((c) => (
                                     <button
                                         key={c.id}
                                         onClick={() => setCampus(c.id)}
                                         className={cn(
-                                            "w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all duration-200",
+                                            "w-full flex items-center justify-between p-3 rounded-xl border transition-all duration-200",
                                             campus === c.id
-                                                ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
-                                                : "hover:border-primary/50 hover:bg-accent/50"
+                                                ? "border-black bg-black/5 shadow-sm"
+                                                : "border-transparent bg-secondary/50 hover:bg-secondary"
                                         )}
                                     >
                                         <div className="text-left">
-                                            <div className="font-semibold">{c.name}</div>
+                                            <div className="font-bold text-sm text-foreground">{c.name}</div>
                                             <div className="text-xs text-muted-foreground mt-0.5">
                                                 {c.shortName} • {c.state}
                                             </div>
                                         </div>
                                         {campus === c.id && (
-                                            <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                                                <Check className="w-4 h-4 text-primary-foreground" />
+                                            <div className="w-5 h-5 rounded-full bg-black flex items-center justify-center">
+                                                <Check className="w-3 h-3 text-white" />
                                             </div>
                                         )}
                                     </button>
@@ -251,14 +318,13 @@ function RegisterForm() {
 
                         <motion.div variants={fadeInUp}>
                             <Button
-                                variant="glow"
-                                className="w-full"
+                                className="w-full rounded-full h-14 text-lg font-bold bg-black text-white hover:bg-black/90 disabled:bg-zinc-100 disabled:text-zinc-300 disabled:opacity-100 shadow-xl"
                                 size="lg"
                                 disabled={!campus}
                                 onClick={() => setStep("details")}
                             >
                                 Continue
-                                <ArrowRight className="w-4 h-4" />
+                                <ArrowRight className="w-5 h-5 ml-2" />
                             </Button>
                         </motion.div>
                     </motion.div>
@@ -268,13 +334,17 @@ function RegisterForm() {
                 {step === "details" && (
                     <motion.div
                         key="details"
-                        variants={staggerContainer}
-                        initial={{ opacity: 0, x: 20 }}
+                        variants={{
+                            initial: { opacity: 0, x: 20 },
+                            animate: { opacity: 1, x: 0 },
+                            exit: { opacity: 0, x: -20 }
+                        }}
+                        initial="initial"
                         animate="animate"
-                        exit={{ opacity: 0, x: -20 }}
-                        className="space-y-6"
+                        exit="exit"
+                        className="space-y-4"
                     >
-                        <motion.div variants={fadeInUp} className="text-center space-y-4">
+                        <motion.div variants={fadeInUp} className="text-center space-y-1">
                             <h1 className="font-display text-4xl lg:text-5xl font-black tracking-tighter">
                                 Create your account
                             </h1>
@@ -285,125 +355,165 @@ function RegisterForm() {
                             </p>
                         </motion.div>
 
-                        <motion.form
-                            variants={fadeInUp}
-                            onSubmit={handleSubmit}
-                            className="space-y-4"
-                        >
-                            {/* Name */}
-                            <div className="space-y-2">
-                                <label htmlFor="name" className="text-sm font-medium flex items-center gap-2">
-                                    <User className="w-4 h-4 text-muted-foreground" />
-                                    {role === "vendor" ? "Business Name" : "Full Name"}
-                                </label>
-                                <Input
-                                    id="name"
-                                    type="text"
-                                    placeholder={role === "vendor" ? "e.g., TechHub NG" : "e.g., Chioma Adebayo"}
-                                    required
-                                    variant="brutalist"
-                                />
-                            </div>
-
-                            {/* Phone */}
-                            <div className="space-y-2">
-                                <label htmlFor="phone" className="text-sm font-medium flex items-center gap-2">
-                                    <Phone className="w-4 h-4 text-muted-foreground" />
-                                    Phone Number
-                                </label>
-                                <Input
-                                    id="phone"
-                                    type="tel"
-                                    placeholder="08012345678"
-                                    required
-                                    variant="brutalist"
-                                />
-                            </div>
-
-                            {/* Email (optional for buyers) */}
-                            <div className="space-y-2">
-                                <label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
-                                    <Mail className="w-4 h-4 text-muted-foreground" />
-                                    Email {role === "buyer" && <span className="text-muted-foreground font-normal">(optional)</span>}
-                                </label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="you@university.edu"
-                                    required={role === "vendor"}
-                                    variant="brutalist"
-                                />
-                            </div>
-
-                            {/* Password */}
-                            <div className="space-y-2">
-                                <label htmlFor="password" className="text-sm font-medium flex items-center gap-2">
-                                    <Lock className="w-4 h-4 text-muted-foreground" />
-                                    Password
-                                </label>
-                                <div className="relative">
-                                    <Input
-                                        id="password"
-                                        type={showPassword ? "text" : "password"}
-                                        placeholder="••••••••"
-                                        variant="brutalist"
-                                        className="pr-12"
-                                        required
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1 rounded-lg hover:bg-accent"
-                                    >
-                                        {showPassword ? (
-                                            <EyeOff className="w-5 h-5" />
-                                        ) : (
-                                            <Eye className="w-5 h-5" />
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Terms */}
-                            <div className="flex items-start gap-3 pt-2">
-                                <input
-                                    type="checkbox"
-                                    id="terms"
-                                    required
-                                    className="mt-1 w-4 h-4 rounded border-2 border-input accent-primary"
-                                />
-                                <label htmlFor="terms" className="text-xs text-muted-foreground leading-relaxed">
-                                    I agree to the{" "}
-                                    <Link href="/terms" className="text-primary hover:underline font-medium">
-                                        Terms of Service
-                                    </Link>{" "}
-                                    and{" "}
-                                    <Link href="/privacy" className="text-primary hover:underline font-medium">
-                                        Privacy Policy
-                                    </Link>
-                                </label>
-                            </div>
-
-                            {/* Submit */}
-                            <Button
-                                type="submit"
-                                variant="glow"
-                                className="w-full"
-                                size="lg"
-                                isLoading={isLoading}
+                        <Form {...form}>
+                            <motion.form
+                                variants={fadeInUp}
+                                onSubmit={form.handleSubmit(onSubmit)}
+                                className="space-y-3"
                             >
-                                {role === "vendor" ? "Create Vendor Account" : "Create Account"}
-                                <ArrowRight className="w-4 h-4" />
-                            </Button>
-                        </motion.form>
+                                {/* Name */}
+                                <FormField
+                                    control={form.control}
+                                    name="name"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="flex items-center gap-2">
+                                                <User className="w-4 h-4 text-muted-foreground" />
+                                                {role === "vendor" ? "Business Name" : "Full Name"}
+                                            </FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    placeholder={role === "vendor" ? "e.g., TechHub NG" : "e.g. Chisom Obierika"}
+                                                    variant="premium"
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
-                        {role === "vendor" && (
-                            <motion.div variants={fadeInUp} className="flex justify-center">
-                                <Badge variant="secondary" className="text-xs py-1.5 px-3">
-                                    Vendor accounts require verification (24-48 hours)
-                                </Badge>
-                            </motion.div>
-                        )}
+                                {/* Phone */}
+                                <FormField
+                                    control={form.control}
+                                    name="phone"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="flex items-center gap-2">
+                                                <Phone className="w-4 h-4 text-muted-foreground" />
+                                                Phone Number
+                                            </FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="tel"
+                                                    placeholder="08012345678"
+                                                    variant="premium"
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {/* Email */}
+                                <FormField
+                                    control={form.control}
+                                    name="email"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="flex items-center gap-2">
+                                                <Mail className="w-4 h-4 text-muted-foreground" />
+                                                Email {role === "buyer" && <span className="text-muted-foreground font-normal">(optional)</span>}
+                                            </FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="email"
+                                                    placeholder="you@university.edu"
+                                                    variant="premium"
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {/* Password */}
+                                <FormField
+                                    control={form.control}
+                                    name="password"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="flex items-center gap-2">
+                                                <Lock className="w-4 h-4 text-muted-foreground" />
+                                                Password
+                                            </FormLabel>
+                                            <FormControl>
+                                                <div className="relative">
+                                                    <Input
+                                                        type={showPassword ? "text" : "password"}
+                                                        placeholder="••••••••"
+                                                        variant="premium"
+                                                        className="pr-12"
+                                                        {...field}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowPassword(!showPassword)}
+                                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1 rounded-lg hover:bg-accent"
+                                                    >
+                                                        {showPassword ? (
+                                                            <EyeOff className="w-5 h-5" />
+                                                        ) : (
+                                                            <Eye className="w-5 h-5" />
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {/* Terms */}
+                                <FormField
+                                    control={form.control}
+                                    name="terms"
+                                    render={({ field }) => (
+                                        <FormItem className="flex items-start gap-3 space-y-0 pt-2">
+                                            <FormControl>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={field.value}
+                                                    onChange={field.onChange}
+                                                    className="mt-1 w-4 h-4 rounded border-2 border-input accent-primary"
+                                                />
+                                            </FormControl>
+                                            <div className="space-y-1 leading-none">
+                                                <label className="text-xs text-muted-foreground leading-relaxed">
+                                                    I agree to the{" "}
+                                                    <Link href="/terms" className="text-primary hover:underline font-medium">
+                                                        Terms of Service
+                                                    </Link>{" "}
+                                                    and{" "}
+                                                    <Link href="/privacy" className="text-primary hover:underline font-medium">
+                                                        Privacy Policy
+                                                    </Link>
+                                                </label>
+                                                <FormMessage />
+                                            </div>
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {/* Submit */}
+                                <Button
+                                    type="submit"
+                                    size="xl"
+                                    className="w-full rounded-full bg-foreground text-background hover:bg-foreground/90 font-bold text-lg h-14 shadow-xl"
+                                    isLoading={isLoading}
+                                >
+                                    {role === "vendor" ? "Create Vendor Account" : "Create Account"}
+                                    <ArrowRight className="w-5 h-5 ml-2" />
+                                </Button>
+                            </motion.form>
+                        </Form>
+
+                        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/60 pt-2">
+                            <Lock className="w-3 h-3" />
+                            <span>Your data is encrypted and secure</span>
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>

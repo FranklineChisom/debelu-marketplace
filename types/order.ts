@@ -92,12 +92,14 @@ export interface OrderStatusUpdate {
 export interface OrderSummary {
     id: string;
     orderNumber: string;
-    status: OrderStatus;
+    status: string; // Relaxed to string for chat usage
     total: number;
     itemCount: number;
-    firstItemImage: string;
-    firstItemName: string;
+    items?: any[]; // For chat order confirmation
+    firstItemImage?: string;
+    firstItemName?: string;
     createdAt: string;
     buyerName?: string; // For vendor view
     vendorName?: string; // For buyer view
+    date?: string; // For chat mock
 }

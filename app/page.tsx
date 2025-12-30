@@ -208,46 +208,63 @@ export default function LandingPage() {
           {/* ... Existing Desktop Chat Card Code ... */}
           <div className="relative group">
             <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400 via-cyan-400 to-violet-400 rounded-3xl opacity-30 blur-xl group-hover:opacity-50 transition-opacity duration-500" />
-            <Card className="relative bg-black/90 text-white border-white/10 shadow-2xl overflow-hidden backdrop-blur-xl rounded-3xl transform group-hover:scale-[1.02] transition-transform duration-500 border-2">
+            <Card className="relative bg-[#0F1115] text-white border-white/5 shadow-2xl overflow-hidden rounded-[2rem] transform group-hover:scale-[1.02] transition-transform duration-500 border">
               <CardContent className="p-0">
-                <div className="flex items-center justify-between p-6 border-b border-white/10 bg-white/5">
+                {/* Header */}
+                <div className="flex items-center justify-between p-6 border-b border-white/5 bg-[#0F1115]">
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-400 flex items-center justify-center shadow-lg shadow-emerald-400/20">
-                      <Bot className="w-7 h-7 text-black" />
+                    <div className="relative">
+                      <div className="w-12 h-12 rounded-2xl bg-[#00DDA3] flex items-center justify-center shadow-[0_0_20px_rgba(0,221,163,0.3)]">
+                        <Bot className="w-6 h-6 text-[#0F1115]" />
+                      </div>
+                      <span className="absolute -bottom-1 -right-1 flex h-4 w-4">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-4 w-4 bg-[#0F1115] items-center justify-center">
+                          <span className="w-2.5 h-2.5 bg-[#00DDA3] rounded-full"></span>
+                        </span>
+                      </span>
                     </div>
                     <div>
-                      <p className="font-display font-black text-xl tracking-tight">Debelu AI</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="relative flex h-2.5 w-2.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                        </span>
-                        <span className="text-xs font-medium text-emerald-400 tracking-wide uppercase">Online</span>
-                      </div>
+                      <p className="font-display font-bold text-lg tracking-tight text-white">Debelu AI</p>
+                      <p className="text-xs font-bold text-[#00DDA3] tracking-wider uppercase">Online</p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <span className="w-2 h-2 rounded-full bg-white/20" />
-                    <span className="w-2 h-2 rounded-full bg-white/20" />
+                  <div className="flex gap-1.5 opacity-50">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white/40" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-white/40" />
                   </div>
                 </div>
-                <div className="p-6 space-y-6 min-h-[300px] flex flex-col justify-end">
+
+                {/* Chat Area */}
+                <div className="p-6 space-y-6 min-h-[320px] flex flex-col justify-end bg-gradient-to-b from-[#0F1115] to-[#0A0C0F]">
+                  {/* User Message (Right) */}
                   <div className="flex justify-end">
-                    <div className="bg-white/10 rounded-2xl rounded-tr-sm px-6 py-4 max-w-[85%] text-base font-medium backdrop-blur-sm border border-white/5">
+                    <div className="bg-[#1A1D21] rounded-2xl rounded-tr-sm px-5 py-4 max-w-[85%] text-[15px] leading-relaxed font-medium text-white/90 border border-white/5 shadow-sm">
                       {chatPreviewMessages[0].content}
                     </div>
                   </div>
+
+                  {/* AI Message (Left) */}
                   <div className="flex justify-start">
-                    <div className="bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-2xl rounded-tl-sm px-6 py-4 max-w-[85%] text-base font-medium border border-emerald-500/30 text-emerald-50 shadow-lg shadow-emerald-900/10">
-                      <Sparkles className="w-4 h-4 text-emerald-400 mb-2" />
-                      {chatPreviewMessages[1].content}
+                    <div className="bg-[#042F2E] rounded-2xl rounded-tl-sm px-5 py-4 max-w-[85%] text-[15px] leading-relaxed font-medium text-[#2DD4BF] border border-[#2DD4BF]/20 shadow-lg shadow-[#00DDA3]/5 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#00DDA3]/10 to-transparent pointer-events-none" />
+                      <div className="relative z-10 flex gap-3">
+                        <Sparkles className="w-5 h-5 text-[#00DDA3] shrink-0 mt-0.5" />
+                        <span>{chatPreviewMessages[1].content}</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="mt-4 relative">
-                    <div className="h-14 w-full bg-white/5 rounded-xl border border-white/10 flex items-center px-4 text-white/30 text-sm">
-                      Type a message...
-                      <div className="ml-auto w-8 h-8 rounded-lg bg-emerald-400/20 flex items-center justify-center">
-                        <ArrowRight className="w-4 h-4 text-emerald-400" />
+
+                  {/* Input Area */}
+                  <div className="mt-4 pt-2">
+                    <div className="h-14 w-full bg-[#1A1D21] rounded-2xl border border-white/5 flex items-center px-2 shadow-inner">
+                      <input
+                        className="flex-1 bg-transparent border-none outline-none px-4 text-sm text-white/80 placeholder:text-white/20 h-full font-medium"
+                        placeholder="Type a message..."
+                        readOnly
+                      />
+                      <div className="w-10 h-10 rounded-xl bg-[#00DDA3] flex items-center justify-center hover:scale-105 transition-transform cursor-default shadow-[0_0_15px_rgba(0,221,163,0.3)]">
+                        <ArrowRight className="w-5 h-5 text-[#0F1115]" />
                       </div>
                     </div>
                   </div>

@@ -1,32 +1,39 @@
-"use client";
 
-import { MessageSquare, Package, ShoppingCart, CheckCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { MessageSquare, Package, ShoppingCart, CheckCircle, FileText, Download } from "lucide-react";
 import { cn, formatNaira } from "@/lib/utils";
 import type { ChatMessage, ProductSummary } from "@/types";
 import { ProductCardChat } from "./product-card-chat";
 import { Badge } from "@/components/ui/badge";
+import { useChatStore } from "@/stores";
+
 
 interface MessageBubbleProps {
     message: ChatMessage;
 }
 
 export function MessageBubble({ message }: MessageBubbleProps) {
+    const router = useRouter();
+    const openPanel = useChatStore((state) => state.openPanel);
+    const setComparingProducts = useChatStore((state) => state.setComparingProducts);
     const { role, type, content, products, product, order, quickActions } = message;
 
-    // System message
-    if (role === "system") {
-        return (
-            <div className="text-center py-2">
-                <span className="text-xs text-muted-foreground">{content}</span>
-            </div>
-        );
-    }
+    // ... (system and user message checks remain the same)
 
     // User message
     if (role === "user") {
         return (
             <div className="chat-bubble chat-bubble-user max-w-[85%]">
                 <p className="text-sm sm:text-base">{content}</p>
+            </div>
+        );
+    }
+
+    // System message
+    if (role === "system") {
+        return (
+            <div className="text-center py-2">
+                <span className="text-xs text-muted-foreground">{content}</span>
             </div>
         );
     }
@@ -50,7 +57,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
                 {/* Products carousel */}
                 {type === "products" && products && products.length > 0 && (
-                    <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
+                    <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 pt-2">
                         <div className="flex gap-3 pb-2">
                             {products.map((product) => (
                                 <ProductCardChat key={product.id} product={product} />
@@ -74,13 +81,36 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                     <OrderConfirmationBubble order={order} />
                 )}
 
+                {/* Invoice */}
+                {type === "invoice" && (
+                    <InvoiceBubble order={order} />
+                )}
+
                 {/* Quick actions */}
                 {quickActions && quickActions.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
                         {quickActions.map((action) => (
                             <button
                                 key={action.id}
-                                className="px-3 py-1.5 text-xs font-medium rounded-full border bg-background hover:bg-muted transition-colors"
+                                className={cn(
+                                    "px-3 py-1.5 text-xs font-medium rounded-full border transition-colors",
+                                    action.variant === "default"
+                                        ? "bg-primary text-primary-foreground hover:bg-primary/90 border-transparent"
+                                        : "bg-background hover:bg-muted border-border"
+                                )}
+                                onClick={() => {
+                                    if (action.action === "compare" && products) {
+                                        setComparingProducts(products);
+                                    } else if (action.action === "checkout") {
+                                        openPanel('checkout');
+                                    } else if (action.action === "view_cart") {
+                                        openPanel('cart');
+                                    } else if (action.action === "track_order") {
+                                        openPanel('order_detail', { orderId: order?.id });
+                                    } else {
+                                        console.log("Action clicked:", action.label);
+                                    }
+                                }}
                             >
                                 {action.label}
                             </button>
@@ -93,8 +123,9 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 }
 
 function CartSummaryBubble() {
+    const openPanel = useChatStore((state) => state.openPanel);
     return (
-        <div className="bg-background border rounded-2xl p-4 max-w-sm">
+        <div className="bg-background border rounded-2xl p-4 max-w-sm cursor-pointer hover:border-primary/50 transition-colors" onClick={() => openPanel('cart')}>
             <div className="flex items-center gap-2 mb-3">
                 <ShoppingCart className="w-4 h-4" />
                 <span className="font-semibold text-sm">Your Cart</span>
@@ -115,13 +146,17 @@ function CartSummaryBubble() {
                     </div>
                 </div>
             </div>
+            <div className="mt-3 text-xs text-center text-primary font-medium">
+                Click to view cart
+            </div>
         </div>
     );
 }
 
 function OrderConfirmationBubble({ order }: { order: any }) {
+    const openPanel = useChatStore((state) => state.openPanel);
     return (
-        <div className="bg-background border rounded-2xl p-4 max-w-sm">
+        <div className="bg-background border rounded-2xl p-4 max-w-sm cursor-pointer hover:border-primary/50 transition-colors" onClick={() => openPanel('order_detail', { orderId: order?.id })}>
             <div className="flex items-center gap-2 mb-3 text-success">
                 <CheckCircle className="w-5 h-5" />
                 <span className="font-semibold">Order Confirmed!</span>
@@ -135,10 +170,42 @@ function OrderConfirmationBubble({ order }: { order: any }) {
                     <span className="text-muted-foreground">Delivery</span>
                     <span>Today, 2-4pm</span>
                 </div>
-                <Badge variant="success" className="mt-2">
+                <Badge variant="success" className="mt-2 text-xs">
                     Vendor notified
                 </Badge>
             </div>
+            <div className="mt-3 text-xs text-center text-primary font-medium">
+                Click to track order
+            </div>
+        </div>
+    );
+}
+
+function InvoiceBubble({ order }: { order: any }) {
+    return (
+        <div className="bg-background border rounded-2xl p-4 max-w-sm">
+            <div className="flex items-center gap-2 mb-3">
+                <FileText className="w-4 h-4 text-muted-foreground" />
+                <span className="font-semibold text-sm">Invoice Available</span>
+            </div>
+            <div className="space-y-2 text-sm mb-4">
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Amount Paid</span>
+                    <span className="font-semibold">{formatNaira(order?.total || 178000)}</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Date</span>
+                    <span>{new Date().toLocaleDateString()}</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Payment Method</span>
+                    <span>Card ending 4242</span>
+                </div>
+            </div>
+            <button className="w-full flex items-center justify-center gap-2 py-2 bg-muted/50 hover:bg-muted text-foreground rounded-lg transition-colors text-xs font-medium border border-border/50">
+                <Download className="w-3.5 h-3.5" />
+                Download PDF
+            </button>
         </div>
     );
 }

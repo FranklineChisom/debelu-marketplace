@@ -9,10 +9,10 @@ export default function AuthLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="h-screen flex bg-background text-foreground overflow-hidden">
+        <div className="h-screen w-full flex bg-background text-foreground overflow-hidden">
             {/* Left Side - Branding (Desktop Only) */}
             <motion.div
-                className="hidden lg:flex lg:w-1/2 xl:w-[55%] bg-foreground text-background relative overflow-hidden"
+                className="hidden lg:flex lg:w-1/2 xl:w-[55%] h-full bg-foreground text-background relative overflow-hidden"
                 initial={{ x: -100, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ duration: 0.8 }}
@@ -61,7 +61,7 @@ export default function AuthLayout({
             </motion.div>
 
             {/* Right Side - Form */}
-            <div className="w-full lg:w-1/2 xl:w-[45%] flex flex-col h-full overflow-y-auto scrollbar-thin">
+            <div className="w-full lg:w-1/2 xl:w-[45%] flex flex-col h-full overflow-y-auto scrollbar-thin relative bg-background">
                 {/* Mobile Header */}
                 <header className="lg:hidden h-16 flex items-center justify-center px-6 border-b border-foreground/10">
                     <Link href="/" className="text-xl font-black tracking-tighter">
@@ -70,7 +70,7 @@ export default function AuthLayout({
                 </header>
 
                 {/* Form Container */}
-                <main className="flex-1 flex items-center justify-center px-6 py-12">
+                <main className="flex-1 flex items-start justify-center px-6 pt-4 lg:pt-8 pb-12">
                     <motion.div
                         className="w-full max-w-sm"
                         initial={{ x: 50, opacity: 0 }}
