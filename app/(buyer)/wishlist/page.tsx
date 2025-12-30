@@ -12,23 +12,25 @@ import {
     ShoppingCart,
     Bell,
     BellOff,
-    TrendingDown,
     Sparkles,
+    MoreHorizontal,
+    Share2,
+    ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatNaira } from "@/lib/utils";
-import { fadeInUp, staggerContainer } from "@/lib/animations";
+import { cn, formatNaira } from "@/lib/utils";
+import { useCartStore } from "@/stores";
 
-// Mock wishlist items
+// Mock wishlist items with real images
 const mockWishlist = [
     {
         id: "1",
-        name: "Dell Inspiron 15 Laptop - Core i5, 8GB RAM, 512GB SSD",
+        name: "Dell Inspiron 15 Laptop",
+        description: "Core i5, 8GB RAM, 512GB SSD",
         price: 165000,
         originalPrice: 195000,
-        image: null,
+        image: "https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?q=80&w=400&auto=format&fit=crop",
         vendorName: "TechHub NG",
         inStock: true,
         priceAlert: true,
@@ -36,9 +38,10 @@ const mockWishlist = [
     },
     {
         id: "2",
-        name: "Apple AirPods Pro 2nd Gen",
+        name: "Apple AirPods Pro",
+        description: "2nd Generation with MagSafe",
         price: 120000,
-        image: null,
+        image: "https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?q=80&w=400&auto=format&fit=crop",
         vendorName: "GadgetZone",
         inStock: true,
         priceAlert: false,
@@ -47,18 +50,32 @@ const mockWishlist = [
     {
         id: "3",
         name: "Samsung Galaxy Watch 5",
+        description: "44mm, Bluetooth, Graphite",
         price: 85000,
-        image: null,
+        image: "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?q=80&w=400&auto=format&fit=crop",
         vendorName: "TechHub NG",
         inStock: false,
         priceAlert: true,
         addedAt: "2 weeks ago",
+    },
+    {
+        id: "4",
+        name: "Sony WH-1000XM5",
+        description: "Wireless Noise Cancelling Headphones",
+        price: 185000,
+        originalPrice: 220000,
+        image: "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?q=80&w=400&auto=format&fit=crop",
+        vendorName: "AudioWorld",
+        inStock: true,
+        priceAlert: false,
+        addedAt: "3 days ago",
     },
 ];
 
 export default function WishlistPage() {
     const router = useRouter();
     const [items, setItems] = useState(mockWishlist);
+    const addItem = useCartStore((state) => state.addItem);
 
     const togglePriceAlert = (id: string) => {
         setItems(
@@ -72,160 +89,216 @@ export default function WishlistPage() {
         setItems(items.filter((item) => item.id !== id));
     };
 
+    const handleAddToCart = (item: typeof mockWishlist[0]) => {
+        addItem({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            image: item.image,
+            vendorName: item.vendorName,
+            rating: 4.5,
+            reviewCount: 100,
+            stock: 10,
+            campusId: "unilag",
+            vendorId: "v1",
+        });
+    };
+
     return (
-        <div className="flex-1 overflow-y-auto scrollbar-thin pb-4">
-            {/* Header */}
-            <header className="h-14 flex items-center justify-between px-4 border-b bg-background/80 backdrop-blur-lg sticky top-0 z-30">
-                <button
-                    onClick={() => router.back()}
-                    className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-accent transition-colors"
-                >
-                    <ArrowLeft className="w-5 h-5" />
-                </button>
-                <h1 className="font-display text-lg font-bold">Wishlist</h1>
-                <div className="w-10" />
+        <div className="flex-1 overflow-y-auto bg-background">
+            {/* Minimal Header */}
+            <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-2xl border-b border-border/40">
+                <div className="flex items-center justify-between px-4 h-14 max-w-3xl mx-auto">
+                    <button
+                        onClick={() => router.back()}
+                        className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <h1 className="font-semibold text-base">Wishlist</h1>
+                    <div className="w-10" />
+                </div>
             </header>
 
-            <motion.div
-                variants={staggerContainer}
-                initial="initial"
-                animate="animate"
-                className="p-4"
-            >
+            <div className="max-w-3xl mx-auto px-4 py-6 pb-20">
                 {items.length === 0 ? (
-                    // Empty State
-                    <motion.div variants={fadeInUp} className="text-center py-20">
-                        <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-accent to-accent/50 flex items-center justify-center">
-                            <Heart className="w-10 h-10 text-muted-foreground" />
-                        </div>
-                        <h2 className="font-display text-2xl font-bold mb-3">
+                    // Empty State - Premium Feel
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-center py-24"
+                    >
+                        <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
+                            className="w-24 h-24 mx-auto mb-8 rounded-full bg-gradient-to-br from-rose-100 to-pink-100 dark:from-rose-900/20 dark:to-pink-900/20 flex items-center justify-center"
+                        >
+                            <Heart className="w-12 h-12 text-rose-400" />
+                        </motion.div>
+                        <h2 className="text-2xl font-bold tracking-tight mb-2">
                             Your wishlist is empty
                         </h2>
                         <p className="text-muted-foreground mb-8 max-w-xs mx-auto">
-                            Save items you love and get notified when prices drop
+                            Save items you love and we'll notify you when prices drop
                         </p>
                         <Link href="/explore">
-                            <Button variant="glow" size="lg">
+                            <Button className="h-12 px-8 rounded-2xl bg-foreground text-background hover:bg-foreground/90">
                                 <Sparkles className="w-4 h-4 mr-2" />
                                 Start Exploring
                             </Button>
                         </Link>
                     </motion.div>
                 ) : (
-                    <div className="space-y-4">
-                        <motion.p variants={fadeInUp} className="text-sm text-muted-foreground">
-                            {items.length} {items.length === 1 ? "item" : "items"} saved
-                        </motion.p>
+                    <div className="space-y-6">
+                        {/* Header Info */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex items-center justify-between"
+                        >
+                            <p className="text-sm text-muted-foreground">
+                                {items.length} {items.length === 1 ? "item" : "items"} saved
+                            </p>
+                            <button className="text-sm text-primary font-medium hover:underline">
+                                Share All
+                            </button>
+                        </motion.div>
 
+                        {/* Wishlist Grid */}
                         <AnimatePresence mode="popLayout">
-                            {items.map((item) => (
-                                <motion.div
-                                    key={item.id}
-                                    variants={fadeInUp}
-                                    layout
-                                    exit={{ opacity: 0, x: -100, transition: { duration: 0.2 } }}
-                                >
-                                    <Card variant="premium" className="overflow-hidden">
-                                        <CardContent className="p-0">
-                                            <div className="flex gap-4 p-4">
-                                                {/* Image */}
-                                                <Link href={`/product/${item.id}`}>
-                                                    <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-muted to-muted/50 flex-shrink-0 flex items-center justify-center text-xs text-muted-foreground overflow-hidden">
-                                                        {item.image ? (
-                                                            <Image
-                                                                src={item.image}
-                                                                alt={item.name}
-                                                                width={96}
-                                                                height={96}
-                                                                className="rounded-2xl object-cover"
-                                                            />
-                                                        ) : (
-                                                            "No img"
-                                                        )}
-                                                    </div>
-                                                </Link>
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                {items.map((item, index) => (
+                                    <motion.div
+                                        key={item.id}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.9 }}
+                                        transition={{ delay: index * 0.05 }}
+                                        layout
+                                        className="group relative bg-card border border-border/50 rounded-3xl overflow-hidden hover:shadow-xl hover:shadow-black/5 transition-all duration-300"
+                                    >
+                                        {/* Image Container */}
+                                        <Link href={`/product/${item.id}`}>
+                                            <div className="relative aspect-square bg-muted overflow-hidden">
+                                                <Image
+                                                    src={item.image}
+                                                    alt={item.name}
+                                                    fill
+                                                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                                />
 
-                                                {/* Details */}
-                                                <div className="flex-1 min-w-0">
-                                                    <Link href={`/product/${item.id}`}>
-                                                        <h3 className="font-semibold line-clamp-2 mb-1 hover:text-primary transition-colors">
-                                                            {item.name}
-                                                        </h3>
-                                                    </Link>
-                                                    <p className="text-xs text-muted-foreground mb-2">
-                                                        {item.vendorName}
-                                                    </p>
-
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="font-bold text-lg">
-                                                            {formatNaira(item.price)}
-                                                        </span>
-                                                        {item.originalPrice && (
-                                                            <>
-                                                                <span className="text-sm text-muted-foreground line-through">
-                                                                    {formatNaira(item.originalPrice)}
-                                                                </span>
-                                                                <Badge variant="destructive" className="text-[10px] font-bold">
-                                                                    <TrendingDown className="w-3 h-3 mr-0.5" />
-                                                                    {Math.round(
-                                                                        (1 - item.price / item.originalPrice) * 100
-                                                                    )}% off
-                                                                </Badge>
-                                                            </>
-                                                        )}
-                                                    </div>
-
-                                                    {!item.inStock && (
-                                                        <Badge variant="secondary" className="text-[10px] mt-2">
-                                                            Out of Stock
+                                                {/* Discount Badge */}
+                                                {item.originalPrice && (
+                                                    <div className="absolute top-3 left-3">
+                                                        <Badge className="bg-rose-500 text-white border-0 font-semibold">
+                                                            {Math.round((1 - item.price / item.originalPrice) * 100)}% OFF
                                                         </Badge>
+                                                    </div>
+                                                )}
+
+                                                {/* Out of Stock Overlay */}
+                                                {!item.inStock && (
+                                                    <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+                                                        <span className="text-sm font-medium text-muted-foreground">Out of Stock</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </Link>
+
+                                        {/* Quick Actions - Top Right */}
+                                        <div className="absolute top-3 right-3 flex gap-2">
+                                            <motion.button
+                                                whileTap={{ scale: 0.9 }}
+                                                onClick={() => togglePriceAlert(item.id)}
+                                                className={cn(
+                                                    "w-9 h-9 rounded-full backdrop-blur-xl flex items-center justify-center transition-all",
+                                                    item.priceAlert
+                                                        ? "bg-primary text-primary-foreground"
+                                                        : "bg-background/80 text-muted-foreground hover:bg-background"
+                                                )}
+                                            >
+                                                {item.priceAlert ? (
+                                                    <Bell className="w-4 h-4" />
+                                                ) : (
+                                                    <BellOff className="w-4 h-4" />
+                                                )}
+                                            </motion.button>
+                                            <motion.button
+                                                whileTap={{ scale: 0.9 }}
+                                                onClick={() => removeItem(item.id)}
+                                                className="w-9 h-9 rounded-full bg-background/80 backdrop-blur-xl flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </motion.button>
+                                        </div>
+
+                                        {/* Content */}
+                                        <div className="p-4 space-y-3">
+                                            <div>
+                                                <Link href={`/product/${item.id}`}>
+                                                    <h3 className="font-semibold line-clamp-1 hover:text-primary transition-colors">
+                                                        {item.name}
+                                                    </h3>
+                                                </Link>
+                                                <p className="text-sm text-muted-foreground line-clamp-1">
+                                                    {item.description}
+                                                </p>
+                                            </div>
+
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <span className="text-lg font-bold">{formatNaira(item.price)}</span>
+                                                    {item.originalPrice && (
+                                                        <span className="text-sm text-muted-foreground line-through ml-2">
+                                                            {formatNaira(item.originalPrice)}
+                                                        </span>
                                                     )}
                                                 </div>
                                             </div>
 
-                                            {/* Actions */}
-                                            <div className="flex border-t">
-                                                <button
-                                                    onClick={() => togglePriceAlert(item.id)}
-                                                    className="flex-1 flex items-center justify-center gap-2 py-3.5 text-sm hover:bg-accent transition-colors"
-                                                >
-                                                    {item.priceAlert ? (
-                                                        <>
-                                                            <Bell className="w-4 h-4 text-primary" />
-                                                            <span className="text-primary font-medium">Alert On</span>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <BellOff className="w-4 h-4 text-muted-foreground" />
-                                                            <span className="text-muted-foreground">Alert Off</span>
-                                                        </>
-                                                    )}
-                                                </button>
-                                                <div className="w-px bg-border" />
-                                                <button
-                                                    className="flex-1 flex items-center justify-center gap-2 py-3.5 text-sm hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                    disabled={!item.inStock}
-                                                >
-                                                    <ShoppingCart className="w-4 h-4" />
-                                                    <span className="font-medium">Add to Cart</span>
-                                                </button>
-                                                <div className="w-px bg-border" />
-                                                <button
-                                                    onClick={() => removeItem(item.id)}
-                                                    className="flex-1 flex items-center justify-center gap-2 py-3.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                    <span className="font-medium">Remove</span>
-                                                </button>
+                                            <div className="flex items-center justify-between pt-1">
+                                                <span className="text-xs text-muted-foreground">
+                                                    {item.vendorName} • {item.addedAt}
+                                                </span>
                                             </div>
-                                        </CardContent>
-                                    </Card>
-                                </motion.div>
-                            ))}
+
+                                            {/* Add to Cart Button */}
+                                            <Button
+                                                onClick={() => handleAddToCart(item)}
+                                                disabled={!item.inStock}
+                                                className="w-full h-11 rounded-xl bg-foreground text-background hover:bg-foreground/90 font-medium"
+                                            >
+                                                <ShoppingCart className="w-4 h-4 mr-2" />
+                                                {item.inStock ? "Add to Cart" : "Out of Stock"}
+                                            </Button>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
                         </AnimatePresence>
+
+                        {/* Price Alert Info */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.3 }}
+                            className="bg-muted/50 rounded-2xl p-4 flex items-start gap-3"
+                        >
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                <Bell className="w-5 h-5 text-primary" />
+                            </div>
+                            <div>
+                                <h4 className="font-medium text-sm mb-1">Price Alerts</h4>
+                                <p className="text-xs text-muted-foreground">
+                                    Enable price alerts on items to get notified when prices drop.
+                                    We'll send you a notification so you never miss a deal.
+                                </p>
+                            </div>
+                        </motion.div>
                     </div>
                 )}
-            </motion.div>
+            </div>
         </div>
     );
 }

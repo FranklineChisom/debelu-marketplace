@@ -3,7 +3,9 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+
 import {
     ArrowLeft,
     Heart,
@@ -29,7 +31,7 @@ import { cn, formatNaira } from "@/lib/utils";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 import { useCartStore } from "@/stores";
 
-// Mock product data
+// Mock product data with variants
 const mockProduct = {
     id: "1",
     name: "Dell Inspiron 15 Laptop - Core i5, 8GB RAM, 512GB SSD",
@@ -48,7 +50,12 @@ Condition: Brand New (Sealed)
 Warranty: 1 Year Official Warranty`,
     price: 165000,
     compareAtPrice: 195000,
-    images: ["/placeholder1.jpg", "/placeholder2.jpg", "/placeholder3.jpg", "/placeholder4.jpg"],
+    images: [
+        "https://images.unsplash.com/photo-1593642702749-b7d2a804fbcf?q=80&w=800&auto=format&fit=crop",
+        "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?q=80&w=800&auto=format&fit=crop",
+        "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?q=80&w=800&auto=format&fit=crop",
+        "https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2?q=80&w=800&auto=format&fit=crop"
+    ],
     category: "Electronics",
     stock: 5,
     rating: 4.8,
@@ -64,8 +71,55 @@ Warranty: 1 Year Official Warranty`,
         { label: "RAM", value: "8GB DDR4" },
         { label: "Storage", value: "512GB SSD" },
         { label: "Screen", value: "15.6\" FHD" },
-    ]
+    ],
+    variants: {
+        colors: [
+            { id: "silver", name: "Platinum Silver", hex: "#C0C0C0" },
+            { id: "black", name: "Carbon Black", hex: "#1a1a1a" },
+            { id: "blue", name: "Ice Blue", hex: "#4F8FBB" },
+        ],
+        ram: [
+            { id: "8gb", name: "8GB RAM", priceAdd: 0 },
+            { id: "16gb", name: "16GB RAM", priceAdd: 25000 },
+        ]
+    }
 };
+
+const relatedProducts = [
+    {
+        id: "2",
+        name: "HP Pavilion 14 Laptop",
+        price: 145000,
+        image: "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?q=80&w=400&auto=format&fit=crop",
+        vendorName: "CompStation",
+        rating: 4.5,
+    },
+    {
+        id: "3",
+        name: "Logitech MX Master 3S Mouse",
+        price: 85000,
+        image: "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?q=80&w=400&auto=format&fit=crop",
+        vendorName: "GadgetWorld",
+        rating: 4.9,
+    },
+    {
+        id: "4",
+        name: "Samsung 27\" Curved Monitor",
+        price: 120000,
+        image: "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?q=80&w=400&auto=format&fit=crop",
+        vendorName: "TechHub NG",
+        rating: 4.7,
+    },
+    {
+        id: "5",
+        name: "Laptop Stand - Aluminum",
+        price: 15000,
+        image: "https://images.unsplash.com/photo-1527443195645-1133f7f28990?q=80&w=400&auto=format&fit=crop",
+        vendorName: "DeskSetup",
+        rating: 4.6,
+    },
+];
+
 
 const mockReviews = [
     {
@@ -91,8 +145,14 @@ export default function ProductDetailPage() {
     const [selectedImage, setSelectedImage] = useState(0);
     const [quantity, setQuantity] = useState(1);
     const [isWishlisted, setIsWishlisted] = useState(false);
+    const [selectedColor, setSelectedColor] = useState(mockProduct.variants.colors[0].id);
+    const [selectedRam, setSelectedRam] = useState(mockProduct.variants.ram[0].id);
     const addItem = useCartStore((state) => state.addItem);
     const isInCart = useCartStore((state) => state.isInCart(mockProduct.id));
+
+    const selectedRamOption = mockProduct.variants.ram.find(r => r.id === selectedRam);
+    const finalPrice = mockProduct.price + (selectedRamOption?.priceAdd || 0);
+
 
     const discountPercent = mockProduct.compareAtPrice
         ? Math.round((1 - mockProduct.price / mockProduct.compareAtPrice) * 100)
@@ -118,7 +178,8 @@ export default function ProductDetailPage() {
     };
 
     return (
-        <div className="min-h-screen bg-background pb-32 md:pb-20">
+        <div className="flex-1 overflow-y-auto bg-background pb-32 md:pb-20">
+
             {/* Transparent Floating Header for Mobile / Sticky for Desktop */}
             <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/40 safe-top transition-all">
                 <div className="flex items-center justify-between p-4 max-w-7xl mx-auto">
@@ -238,7 +299,65 @@ export default function ProductDetailPage() {
 
                         <Separator />
 
+                        {/* Variant Selection */}
+                        <motion.div variants={fadeInUp} className="space-y-6">
+                            {/* Color Selection */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Color</h3>
+                                    <span className="text-sm font-medium">{mockProduct.variants.colors.find(c => c.id === selectedColor)?.name}</span>
+                                </div>
+                                <div className="flex gap-3">
+                                    {mockProduct.variants.colors.map((color) => (
+                                        <button
+                                            key={color.id}
+                                            onClick={() => setSelectedColor(color.id)}
+                                            className={cn(
+                                                "w-12 h-12 rounded-full border-2 transition-all duration-200 relative",
+                                                selectedColor === color.id
+                                                    ? "border-primary ring-2 ring-primary/30 scale-110"
+                                                    : "border-border/50 hover:border-primary/50 hover:scale-105"
+                                            )}
+                                            style={{ backgroundColor: color.hex }}
+                                            title={color.name}
+                                        >
+                                            {selectedColor === color.id && (
+                                                <CheckCircle className="absolute inset-0 m-auto w-5 h-5 text-white drop-shadow-lg" />
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* RAM Selection */}
+                            <div className="space-y-3">
+                                <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Configuration</h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {mockProduct.variants.ram.map((ram) => (
+                                        <button
+                                            key={ram.id}
+                                            onClick={() => setSelectedRam(ram.id)}
+                                            className={cn(
+                                                "p-4 rounded-xl border-2 transition-all duration-200 text-left",
+                                                selectedRam === ram.id
+                                                    ? "border-primary bg-primary/5 shadow-lg shadow-primary/10"
+                                                    : "border-border/50 hover:border-primary/30 bg-secondary/20"
+                                            )}
+                                        >
+                                            <p className="font-bold text-sm">{ram.name}</p>
+                                            {ram.priceAdd > 0 ? (
+                                                <p className="text-xs text-primary font-medium mt-1">+{formatNaira(ram.priceAdd)}</p>
+                                            ) : (
+                                                <p className="text-xs text-muted-foreground mt-1">Base price</p>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </motion.div>
+
                         {/* Key Specs Grid */}
+
                         <motion.div variants={fadeInUp} className="grid grid-cols-2 gap-4">
                             {mockProduct.specs.map((spec, i) => (
                                 <div key={i} className="p-3 rounded-xl bg-secondary/30 border border-border/50">
@@ -349,6 +468,45 @@ export default function ProductDetailPage() {
                         </motion.div>
                     </motion.div>
                 </div>
+
+                {/* Related Products */}
+                <motion.div
+                    variants={fadeInUp}
+                    initial="initial"
+                    animate="animate"
+                    className="mt-16 space-y-6"
+                >
+                    <h2 className="text-2xl font-display font-bold">You Might Also Like</h2>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {relatedProducts.map((product) => (
+                            <Link key={product.id} href={`/product/${product.id}`}>
+                                <Card className="overflow-hidden group hover:shadow-lg transition-all hover:border-primary/30">
+                                    <div className="aspect-square bg-muted relative overflow-hidden">
+                                        <Image
+                                            src={product.image}
+                                            alt={product.name}
+                                            fill
+                                            className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                        />
+                                    </div>
+                                    <CardContent className="p-3">
+                                        <p className="text-xs text-muted-foreground mb-1">{product.vendorName}</p>
+                                        <h3 className="font-semibold text-sm line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+                                            {product.name}
+                                        </h3>
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-bold text-primary">{formatNaira(product.price)}</span>
+                                            <div className="flex items-center text-amber-500 text-xs">
+                                                <Star className="w-3 h-3 fill-current mr-0.5" />
+                                                {product.rating}
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </Link>
+                        ))}
+                    </div>
+                </motion.div>
             </main>
 
             {/* Bottom Action Bar */}
@@ -380,7 +538,7 @@ export default function ProductDetailPage() {
                         disabled={isInCart || mockProduct.stock === 0}
                     >
                         <ShoppingCart className="w-5 h-5 mr-2" />
-                        {isInCart ? "Already in Cart" : mockProduct.stock === 0 ? "Out of Stock" : `Add to Cart - ${formatNaira(mockProduct.price * quantity)}`}
+                        {isInCart ? "Already in Cart" : mockProduct.stock === 0 ? "Out of Stock" : `Add to Cart - ${formatNaira(finalPrice * quantity)}`}
                     </Button>
                 </div>
             </div>

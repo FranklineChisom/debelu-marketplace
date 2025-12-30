@@ -1,15 +1,100 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Trash2, Minus, Plus, ShoppingBag, ArrowRight, Sparkles } from "lucide-react";
+import { ArrowLeft, Trash2, Minus, Plus, ShoppingBag, ArrowRight, Sparkles, Star, Tag, Bookmark } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { cn, formatNaira } from "@/lib/utils";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 import { useCartStore } from "@/stores";
+
+// Mock recommendations
+const recommendations = [
+    {
+        id: "rec1",
+        name: "USB-C Hub 7-in-1",
+        price: 15000,
+        image: "https://images.unsplash.com/photo-1625723044792-44de16ccb4e9?q=80&w=400&auto=format&fit=crop",
+        vendorName: "TechHub NG",
+        rating: 4.7,
+    },
+    {
+        id: "rec2",
+        name: "Laptop Sleeve 15\"",
+        price: 8500,
+        image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?q=80&w=400&auto=format&fit=crop",
+        vendorName: "CampusBags",
+        rating: 4.5,
+    },
+    {
+        id: "rec3",
+        name: "Wireless Earbuds Pro",
+        price: 25000,
+        image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?q=80&w=400&auto=format&fit=crop",
+        vendorName: "GadgetWorld",
+        rating: 4.8,
+    },
+    {
+        id: "rec4",
+        name: "Phone Stand Adjustable",
+        price: 5000,
+        image: "https://images.unsplash.com/photo-1586816879360-004f5b0c51e3?q=80&w=400&auto=format&fit=crop",
+        vendorName: "DeskSetup",
+        rating: 4.6,
+    },
+];
+
+// Mock saved for later items
+const savedForLater = [
+    {
+        id: "saved1",
+        name: "Mechanical Keyboard RGB",
+        price: 45000,
+        image: "https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=400&auto=format&fit=crop",
+        vendorName: "TechHub NG",
+    },
+];
+
+// Mock initial cart items for testing
+const mockInitialCartItems = [
+    {
+        product: {
+            id: "mock1",
+            name: "Dell Inspiron 15 Laptop - Core i5, 8GB RAM",
+            price: 165000,
+            compareAtPrice: 195000,
+            image: "https://images.unsplash.com/photo-1593642702749-b7d2a804fbcf?q=80&w=400&auto=format&fit=crop",
+            vendorName: "TechHub NG",
+            rating: 4.8,
+            reviewCount: 24,
+            stock: 5,
+            campusId: "unilag",
+            vendorId: "v1",
+        },
+        quantity: 1,
+    },
+    {
+        product: {
+            id: "mock2",
+            name: "Logitech MX Master 3S Mouse",
+            price: 85000,
+            image: "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?q=80&w=400&auto=format&fit=crop",
+            vendorName: "GadgetWorld",
+            rating: 4.9,
+            reviewCount: 156,
+            stock: 10,
+            campusId: "unilag",
+            vendorId: "v2",
+        },
+        quantity: 2,
+    },
+];
 
 export default function CartPage() {
     const router = useRouter();
@@ -18,11 +103,32 @@ export default function CartPage() {
     const removeItem = useCartStore((state) => state.removeItem);
     const getSubtotal = useCartStore((state) => state.getSubtotal);
     const clearCart = useCartStore((state) => state.clearCart);
+    const addItem = useCartStore((state) => state.addItem);
+
+    const [promoCode, setPromoCode] = useState("");
+    const [promoApplied, setPromoApplied] = useState(false);
+
+    // Add mock items on first load if cart is empty
+    useEffect(() => {
+        if (items.length === 0) {
+            mockInitialCartItems.forEach(({ product, quantity }) => {
+                addItem(product, quantity);
+            });
+        }
+    }, []);
 
     const subtotal = getSubtotal();
+    const discount = promoApplied ? subtotal * 0.1 : 0;
     const deliveryFee = items.length > 0 ? 500 : 0;
-    const total = subtotal + deliveryFee;
+    const total = subtotal - discount + deliveryFee;
     const hasItems = items.length > 0;
+
+    const handleApplyPromo = () => {
+        if (promoCode.toUpperCase() === "DEBELU10") {
+            setPromoApplied(true);
+        }
+    };
+
 
     return (
         <div className="flex-1 overflow-y-auto scrollbar-thin">
@@ -165,10 +271,32 @@ export default function CartPage() {
                                         <span className="text-muted-foreground">Delivery</span>
                                         <span className="font-bold">{formatNaira(deliveryFee)}</span>
                                     </div>
-                                    <div className="border-t border-foreground/10 pt-4 flex justify-between text-xl">
+                                    <div className="flex justify-between">
                                         <span className="font-bold">Total</span>
                                         <span className="font-black">{formatNaira(total)}</span>
                                     </div>
+                                </div>
+
+                                {/* Promo Code */}
+                                <div className="space-y-3">
+                                    <div className="flex gap-2">
+                                        <Input
+                                            placeholder="Promo code"
+                                            value={promoCode}
+                                            onChange={(e) => setPromoCode(e.target.value)}
+                                            className="flex-1"
+                                        />
+                                        <Button variant="outline" onClick={handleApplyPromo} disabled={promoApplied}>
+                                            {promoApplied ? "Applied!" : "Apply"}
+                                        </Button>
+                                    </div>
+                                    {promoApplied && (
+                                        <Badge variant="secondary" className="bg-green-500/10 text-green-600">
+                                            <Tag className="w-3 h-3 mr-1" />
+                                            10% discount applied
+                                        </Badge>
+                                    )}
+                                    <p className="text-xs text-muted-foreground">Try: DEBELU10</p>
                                 </div>
 
                                 <Link href="/checkout">
@@ -181,7 +309,84 @@ export default function CartPage() {
                         </motion.div>
                     </div>
                 )}
+
+                {/* Recommendations */}
+                {hasItems && (
+                    <motion.div
+                        variants={fadeInUp}
+                        initial="initial"
+                        animate="animate"
+                        className="mt-12 space-y-6"
+                    >
+                        <h2 className="text-xl font-black">You Might Also Like</h2>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {recommendations.map((product) => (
+                                <Link key={product.id} href={`/product/${product.id}`}>
+                                    <Card className="overflow-hidden group hover:shadow-lg transition-all hover:border-primary/30">
+                                        <div className="aspect-square bg-muted relative overflow-hidden">
+                                            <Image
+                                                src={product.image}
+                                                alt={product.name}
+                                                fill
+                                                className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                            />
+                                        </div>
+                                        <CardContent className="p-3">
+                                            <p className="text-xs text-muted-foreground mb-1">{product.vendorName}</p>
+                                            <h3 className="font-semibold text-sm line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+                                                {product.name}
+                                            </h3>
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-bold text-primary">{formatNaira(product.price)}</span>
+                                                <div className="flex items-center text-amber-500 text-xs">
+                                                    <Star className="w-3 h-3 fill-current mr-0.5" />
+                                                    {product.rating}
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* Saved for Later */}
+                {hasItems && savedForLater.length > 0 && (
+                    <motion.div
+                        variants={fadeInUp}
+                        initial="initial"
+                        animate="animate"
+                        className="mt-12 space-y-6 pb-32 lg:pb-8"
+                    >
+                        <h2 className="text-xl font-black flex items-center gap-2">
+                            <Bookmark className="w-5 h-5" />
+                            From your Wishlist
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {savedForLater.map((item) => (
+                                <Card key={item.id} className="flex gap-4 p-4 hover:border-primary/30 transition-all">
+                                    <div className="w-20 h-20 rounded-xl bg-muted relative overflow-hidden flex-shrink-0">
+                                        <Image
+                                            src={item.image}
+                                            alt={item.name}
+                                            fill
+                                            className="object-cover"
+                                        />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-semibold line-clamp-1">{item.name}</h3>
+                                        <p className="text-xs text-muted-foreground">{item.vendorName}</p>
+                                        <p className="font-bold text-primary mt-2">{formatNaira(item.price)}</p>
+                                    </div>
+                                    <Button variant="outline" size="sm">Move to Cart</Button>
+                                </Card>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
             </div>
+
 
             {/* Mobile Bottom Bar */}
             {hasItems && (

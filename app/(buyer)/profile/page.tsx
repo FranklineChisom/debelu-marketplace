@@ -17,8 +17,12 @@ import {
     Shield,
     Globe,
     ChevronRight,
-    Edit2
+    Edit2,
+    Trophy,
+    Gift,
+    Package
 } from "lucide-react";
+
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
@@ -143,7 +147,70 @@ export default function ProfilePage() {
                         </Card>
                     </motion.div>
 
+                    {/* Quick Action Links */}
+                    <motion.div variants={fadeInUp}>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <Link href="/wishlist">
+                                <Card className="group cursor-pointer border-border/50 hover:border-primary/30 hover:shadow-lg transition-all">
+                                    <CardContent className="p-4 flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <Heart className="w-5 h-5 text-red-500" />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-sm group-hover:text-primary transition-colors">Wishlist</p>
+                                            <p className="text-xs text-muted-foreground">{user.stats.wishlist} items</p>
+                                        </div>
+                                        <ChevronRight className="w-4 h-4 ml-auto text-muted-foreground group-hover:text-primary transition-colors" />
+                                    </CardContent>
+                                </Card>
+                            </Link>
+                            <Link href="/profile/badges">
+                                <Card className="group cursor-pointer border-border/50 hover:border-primary/30 hover:shadow-lg transition-all">
+                                    <CardContent className="p-4 flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <Trophy className="w-5 h-5 text-amber-500" />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-sm group-hover:text-primary transition-colors">Badges</p>
+                                            <p className="text-xs text-muted-foreground">Level 3</p>
+                                        </div>
+                                        <ChevronRight className="w-4 h-4 ml-auto text-muted-foreground group-hover:text-primary transition-colors" />
+                                    </CardContent>
+                                </Card>
+                            </Link>
+                            <Link href="/profile/referral">
+                                <Card className="group cursor-pointer border-border/50 hover:border-primary/30 hover:shadow-lg transition-all">
+                                    <CardContent className="p-4 flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <Gift className="w-5 h-5 text-emerald-500" />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-sm group-hover:text-primary transition-colors">Referrals</p>
+                                            <p className="text-xs text-muted-foreground">Earn ₦500</p>
+                                        </div>
+                                        <ChevronRight className="w-4 h-4 ml-auto text-muted-foreground group-hover:text-primary transition-colors" />
+                                    </CardContent>
+                                </Card>
+                            </Link>
+                            <Link href="/orders">
+                                <Card className="group cursor-pointer border-border/50 hover:border-primary/30 hover:shadow-lg transition-all">
+                                    <CardContent className="p-4 flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <Package className="w-5 h-5 text-primary" />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-sm group-hover:text-primary transition-colors">Orders</p>
+                                            <p className="text-xs text-muted-foreground">{user.stats.orders} orders</p>
+                                        </div>
+                                        <ChevronRight className="w-4 h-4 ml-auto text-muted-foreground group-hover:text-primary transition-colors" />
+                                    </CardContent>
+                                </Card>
+                            </Link>
+                        </div>
+                    </motion.div>
+
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
 
                         {/* Left Column: Personal Info & Vibe */}
                         <div className="md:col-span-2 space-y-6">

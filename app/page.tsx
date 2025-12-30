@@ -27,7 +27,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CAMPUSES, PRODUCT_CATEGORIES } from "@/lib/constants";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
-import * as Undraw from 'react-undraw-illustrations';
+import {
+  SvgProgramming,
+  SvgMakeupArtist,
+  SvgStreetFood,
+  SvgStudying
+} from 'iblis-react-undraw';
+
+
+
 
 // Chat preview messages
 const chatPreviewMessages = [
@@ -350,28 +358,28 @@ export default function LandingPage() {
               {
                 title: "The Tech Bro",
                 subtitle: "Setups & Gadgets",
-                Component: Undraw.UndrawProgramming,
+                Component: SvgProgramming,
                 colors: "bg-blue-50 text-blue-900",
                 accent: "bg-blue-100"
               },
               {
-                title: "The Slay Queen",
+                title: "The Fashionista",
                 subtitle: "Fashion & Glam",
-                Component: Undraw.UndrawMakeupArtist,
+                Component: SvgMakeupArtist,
                 colors: "bg-pink-50 text-pink-900",
                 accent: "bg-pink-100"
               },
               {
                 title: "The Foodie",
                 subtitle: "Midnight Snacks",
-                Component: Undraw.UndrawStreetFood,
+                Component: SvgStreetFood,
                 colors: "bg-orange-50 text-orange-900",
                 accent: "bg-orange-100"
               },
               {
                 title: "The Scholar",
                 subtitle: "Start Reading",
-                Component: Undraw.UndrawStudying,
+                Component: SvgStudying,
                 colors: "bg-emerald-50 text-emerald-900",
                 accent: "bg-emerald-100"
               },
@@ -390,8 +398,9 @@ export default function LandingPage() {
                 <div className="flex-1 relative flex items-center justify-center p-8 translate-y-4">
                   <div className={`absolute inset-0 ${vibe.accent} rounded-t-2xl mx-4 mt-12`}></div>
                   <div className="relative z-10 w-full h-full max-h-[250px] scale-110">
-                    <vibe.Component primaryColor="currentColor" style={{ width: '100%', height: '100%' }} />
+                    <vibe.Component style={{ width: '100%', height: '100%' }} />
                   </div>
+
                 </div>
 
                 {/* Bottom Action Area */}
@@ -404,24 +413,25 @@ export default function LandingPage() {
               </div>
             ))}
           </motion.div>
+
+
         </motion.div>
 
         {/* --- DESKTOP: Grid (Original) --- */}
         <div className="hidden lg:grid grid-cols-4 gap-4 px-20">
-          {/* ... Original Desktop Grid Code ... */}
           {[
             {
               title: "The Tech Bro",
               subtitle: "Setups, Gadgets & Coffee",
-              Component: Undraw.UndrawProgramming,
+              Component: SvgProgramming,
               hex: "#06b6d4", // Cyan-500
               color: "from-blue-500/20 to-cyan-500/20",
               border: "border-blue-500/20"
             },
             {
-              title: "The Slay Queen",
+              title: "The Fashionista",
               subtitle: "Fashion, Skincare & Glam",
-              Component: Undraw.UndrawMakeupArtist,
+              Component: SvgMakeupArtist,
               hex: "#ec4899", // Pink-500
               color: "from-pink-500/20 to-rose-500/20",
               border: "border-pink-500/20"
@@ -429,7 +439,7 @@ export default function LandingPage() {
             {
               title: "The Foodie",
               subtitle: "Midnight Snacks & Meals",
-              Component: Undraw.UndrawStreetFood,
+              Component: SvgStreetFood,
               hex: "#f97316", // Orange-500
               color: "from-orange-500/20 to-yellow-500/20",
               border: "border-orange-500/20"
@@ -437,7 +447,7 @@ export default function LandingPage() {
             {
               title: "The Scholar",
               subtitle: "Books, Lamps & Essentials",
-              Component: Undraw.UndrawStudying,
+              Component: SvgStudying,
               hex: "#10b981", // Emerald-500
               color: "from-emerald-500/20 to-green-500/20",
               border: "border-emerald-500/20"
@@ -454,12 +464,9 @@ export default function LandingPage() {
               <div className={`absolute inset-0 bg-gradient-to-br ${vibe.color} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
               <div className="absolute inset-0 flex items-center justify-center p-8">
                 <div className="relative w-full h-[250px] transform group-hover:scale-110 group-hover:-translate-y-4 transition-all duration-700 ease-out flex items-center justify-center">
-                  <vibe.Component
-                    primaryColor={vibe.hex}
-                    height="220px"
-                    style={{ width: '100%', height: '100%' }}
-                  />
+                  <vibe.Component style={{ width: '100%', height: '220px' }} />
                 </div>
+
               </div>
               <div className="absolute bottom-0 left-0 right-0 p-8 pt-20 bg-gradient-to-t from-background via-background/90 to-transparent">
                 <h3 className="text-3xl font-black mb-2 leading-none group-hover:translate-x-2 transition-transform duration-300">
@@ -472,6 +479,8 @@ export default function LandingPage() {
             </motion.div>
           ))}
         </div>
+
+
       </section>
 
       {/* --- ANTI-MARKETPLACE (Refined Desktop) --- */}

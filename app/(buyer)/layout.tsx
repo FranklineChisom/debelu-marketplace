@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useCartStore, useUIStore } from "@/stores";
 import { usePathname } from "next/navigation";
 import { CAMPUSES } from "@/lib/constants";
+import { useState, useEffect } from "react";
 
 export default function BuyerLayout({
     children,
@@ -17,8 +18,14 @@ export default function BuyerLayout({
     const pathname = usePathname();
     const cartItemCount = useCartStore((state) => state.getItemCount());
     const selectedCampus = useUIStore((state) => state.selectedCampus);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const campus = CAMPUSES.find((c) => c.id === selectedCampus);
+
 
     const navItems = [
         { href: "/chat", icon: MessageSquare, label: "Chat" },
@@ -61,7 +68,7 @@ export default function BuyerLayout({
                         >
                             <ShoppingCart className="w-5 h-5" />
                             <AnimatePresence>
-                                {cartItemCount > 0 && (
+                                {mounted && cartItemCount > 0 && (
                                     <motion.span
                                         key={cartItemCount}
                                         initial={{ scale: 0 }}
@@ -73,6 +80,7 @@ export default function BuyerLayout({
                                     </motion.span>
                                 )}
                             </AnimatePresence>
+
                         </Link>
                     </div>
                 </div>

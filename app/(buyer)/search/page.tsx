@@ -44,7 +44,7 @@ const MOCK_RESULTS = [
         name: "Dell Inspiron 15 Laptop - Core i5, 8GB RAM",
         price: 165000,
         compareAtPrice: 195000,
-        image: "https://images.unsplash.com/photo-1593642702749-b7d2a804fbcf?q=80&w=2600&auto=format&fit=crop",
+        image: "https://images.unsplash.com/photo-1593642702749-b7d2a804fbcf?q=80&w=800&auto=format&fit=crop",
         vendorName: "TechHub NG",
         rating: 4.8,
         reviewCount: 24,
@@ -54,7 +54,7 @@ const MOCK_RESULTS = [
         id: "2",
         name: "HP Pavilion 14 Laptop",
         price: 145000,
-        image: "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?q=80&w=2670&auto=format&fit=crop",
+        image: "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?q=80&w=800&auto=format&fit=crop",
         vendorName: "CompStation",
         rating: 4.5,
         reviewCount: 12,
@@ -64,7 +64,7 @@ const MOCK_RESULTS = [
         id: "3",
         name: "Logitech MX Master 3S",
         price: 85000,
-        image: "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?q=80&w=2667&auto=format&fit=crop",
+        image: "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?q=80&w=800&auto=format&fit=crop",
         vendorName: "GadgetWorld",
         rating: 4.9,
         reviewCount: 156,
@@ -74,7 +74,7 @@ const MOCK_RESULTS = [
         id: "4",
         name: "Nike Air Jordan 1 High",
         price: 75000,
-        image: "https://images.unsplash.com/photo-1552346154-21d32810aba3?q=80&w=2670&auto=format&fit=crop",
+        image: "https://images.unsplash.com/photo-1552346154-21d32810aba3?q=80&w=800&auto=format&fit=crop",
         vendorName: "Campus Kicks",
         rating: 4.7,
         reviewCount: 45,
@@ -84,13 +84,87 @@ const MOCK_RESULTS = [
         id: "5",
         name: "Calculus: Early Transcendentals",
         price: 25000,
-        image: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=2574&auto=format&fit=crop",
+        image: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=800&auto=format&fit=crop",
         vendorName: "Book Worms",
         rating: 4.9,
         reviewCount: 8,
         category: "books"
-    }
+    },
+    {
+        id: "6",
+        name: "Apple AirPods Pro 2nd Gen",
+        price: 120000,
+        compareAtPrice: 140000,
+        image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?q=80&w=800&auto=format&fit=crop",
+        vendorName: "GadgetWorld",
+        rating: 4.9,
+        reviewCount: 234,
+        category: "electronics"
+    },
+    {
+        id: "7",
+        name: "Samsung Galaxy Watch 5",
+        price: 95000,
+        image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=800&auto=format&fit=crop",
+        vendorName: "TechHub NG",
+        rating: 4.6,
+        reviewCount: 67,
+        category: "electronics"
+    },
+    {
+        id: "8",
+        name: "Vintage Band Tee - Nirvana",
+        price: 8500,
+        image: "https://images.unsplash.com/photo-1576566588028-4147f3842f27?q=80&w=800&auto=format&fit=crop",
+        vendorName: "Thrift Kings",
+        rating: 4.4,
+        reviewCount: 19,
+        category: "fashion"
+    },
+    {
+        id: "9",
+        name: "LED Desk Lamp - Wireless Charging",
+        price: 18000,
+        compareAtPrice: 22000,
+        image: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?q=80&w=800&auto=format&fit=crop",
+        vendorName: "DeskSetup",
+        rating: 4.7,
+        reviewCount: 89,
+        category: "home"
+    },
+    {
+        id: "10",
+        name: "Anker PowerCore 20000mAh",
+        price: 15000,
+        image: "https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?q=80&w=800&auto=format&fit=crop",
+        vendorName: "GadgetWorld",
+        rating: 4.8,
+        reviewCount: 312,
+        category: "accessories"
+    },
+    {
+        id: "11",
+        name: "Hostel Single Mattress - Memory Foam",
+        price: 35000,
+        image: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=800&auto=format&fit=crop",
+        vendorName: "Campus Living",
+        rating: 4.3,
+        reviewCount: 28,
+        category: "home"
+    },
+    {
+        id: "12",
+        name: "Backpack - 40L Travel Bag",
+        price: 22000,
+        compareAtPrice: 28000,
+        image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?q=80&w=800&auto=format&fit=crop",
+        vendorName: "CampusBags",
+        rating: 4.6,
+        reviewCount: 156,
+        category: "fashion"
+    },
 ];
+
 
 const RECENT_SEARCHES = ["MacBook Pro", "Anime Hoodie", "Calculus Textbook", "Gaming Mouse"];
 const TRENDING_SEARCHES = ["iPhone 15", "Sneakers", "Hostel Bed", "Power Bank"];
@@ -257,11 +331,31 @@ function SearchPageContent() {
     const [query, setQuery] = useState(initialQuery);
     const [results, setResults] = useState(initialQuery ? MOCK_RESULTS : []);
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+    const [sortBy, setSortBy] = useState<"relevance" | "price-low" | "price-high" | "rating" | "newest">("relevance");
+
+    const sortOptions = [
+        { value: "relevance", label: "Most Relevant" },
+        { value: "price-low", label: "Price: Low to High" },
+        { value: "price-high", label: "Price: High to Low" },
+        { value: "rating", label: "Highest Rated" },
+        { value: "newest", label: "Newest First" },
+    ];
+
+    const sortedResults = [...results].sort((a, b) => {
+        switch (sortBy) {
+            case "price-low": return a.price - b.price;
+            case "price-high": return b.price - a.price;
+            case "rating": return b.rating - a.rating;
+            default: return 0;
+        }
+    });
 
     const isSearching = query.length > 0;
 
+
     return (
-        <div className="min-h-screen bg-background">
+        <div className="flex-1 overflow-y-auto bg-background">
+
 
             {/* Header */}
             <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border/40">
@@ -408,6 +502,32 @@ function SearchPageContent() {
                                             </SheetContent>
                                         </Sheet>
 
+                                        {/* Sort Dropdown */}
+                                        <div className="relative group">
+                                            <Button variant="outline" size="sm" className="rounded-full gap-1">
+                                                <SlidersHorizontal className="w-3.5 h-3.5" />
+                                                <span className="hidden sm:inline">
+                                                    {sortOptions.find(o => o.value === sortBy)?.label || "Sort"}
+                                                </span>
+                                                <ChevronDown className="w-3 h-3" />
+                                            </Button>
+                                            <div className="absolute right-0 top-full mt-2 w-48 bg-background border border-border rounded-xl shadow-lg py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                                                {sortOptions.map((option) => (
+                                                    <button
+                                                        key={option.value}
+                                                        onClick={() => setSortBy(option.value as typeof sortBy)}
+                                                        className={cn(
+                                                            "w-full px-4 py-2 text-left text-sm hover:bg-muted transition-colors flex items-center justify-between",
+                                                            sortBy === option.value && "text-primary font-medium"
+                                                        )}
+                                                    >
+                                                        {option.label}
+                                                        {sortBy === option.value && <Check className="w-4 h-4" />}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
                                         {/* View Toggle */}
                                         <div className="flex items-center border border-border rounded-lg p-1">
                                             <Button
@@ -431,8 +551,8 @@ function SearchPageContent() {
                                 </div>
 
                                 {/* Results Grid */}
-                                {results.length > 0 ? (
-                                    <ProductGrid results={results} viewMode={viewMode} />
+                                {sortedResults.length > 0 ? (
+                                    <ProductGrid results={sortedResults} viewMode={viewMode} />
                                 ) : (
                                     <div className="py-20 text-center">
                                         <div className="w-20 h-20 bg-muted/40 rounded-full flex items-center justify-center mx-auto mb-6">
