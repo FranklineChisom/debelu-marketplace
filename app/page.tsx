@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CAMPUSES, PRODUCT_CATEGORIES } from "@/lib/constants";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
+import * as Undraw from 'react-undraw-illustrations';
 
 // Chat preview messages
 const chatPreviewMessages = [
@@ -363,12 +364,42 @@ export default function LandingPage() {
           </motion.div>
 
           {/* Vibe Cards - Horizontal Scroll / Grid Hybrid */}
+
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { title: "The Tech Bro", subtitle: "Setups, Gadgets & Coffee", icon: <Monitor className="w-6 h-6" />, color: "from-blue-500/20 to-cyan-500/20", border: "border-blue-500/20" },
-              { title: "The Slay Queen", subtitle: "Fashion, Skincare & Glam", icon: <Gem className="w-6 h-6" />, color: "from-pink-500/20 to-rose-500/20", border: "border-pink-500/20" },
-              { title: "The Foodie", subtitle: "Midnight Snacks & Meals", icon: <Utensils className="w-6 h-6" />, color: "from-orange-500/20 to-yellow-500/20", border: "border-orange-500/20" },
-              { title: "The Scholar", subtitle: "Books, Lamps & Essentials", icon: <GraduationCap className="w-6 h-6" />, color: "from-emerald-500/20 to-green-500/20", border: "border-emerald-500/20" },
+              {
+                title: "The Tech Bro",
+                subtitle: "Setups, Gadgets & Coffee",
+                Component: Undraw.UndrawProgramming,
+                hex: "#06b6d4", // Cyan-500
+                color: "from-blue-500/20 to-cyan-500/20",
+                border: "border-blue-500/20"
+              },
+              {
+                title: "The Slay Queen",
+                subtitle: "Fashion, Skincare & Glam",
+                Component: Undraw.UndrawMakeupArtist,
+                hex: "#ec4899", // Pink-500
+                color: "from-pink-500/20 to-rose-500/20",
+                border: "border-pink-500/20"
+              },
+              {
+                title: "The Foodie",
+                subtitle: "Midnight Snacks & Meals",
+                Component: Undraw.UndrawStreetFood,
+                hex: "#f97316", // Orange-500
+                color: "from-orange-500/20 to-yellow-500/20",
+                border: "border-orange-500/20"
+              },
+              {
+                title: "The Scholar",
+                subtitle: "Books, Lamps & Essentials",
+                Component: Undraw.UndrawStudying,
+                hex: "#10b981", // Emerald-500
+                color: "from-emerald-500/20 to-green-500/20",
+                border: "border-emerald-500/20"
+              },
             ].map((vibe, i) => (
               <motion.div
                 key={vibe.title}
@@ -376,31 +407,32 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className={`group relative h-[400px] rounded-3xl overflow-hidden border ${vibe.border} bg-background cursor-pointer`}
+                className={`group relative h-[450px] rounded-3xl overflow-hidden border ${vibe.border} bg-background cursor-pointer`}
               >
                 {/* Gradient Background */}
                 <div className={`absolute inset-0 bg-gradient-to-br ${vibe.color} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
 
-                <div className="absolute inset-0 p-8 flex flex-col justify-between">
-                  <div className="w-16 h-16 rounded-2xl bg-background/50 backdrop-blur-md border border-foreground/5 flex items-center justify-center text-foreground shadow-sm group-hover:scale-110 transition-transform duration-500">
-                    {/* Icon Wrapper to scale it up */}
-                    <div className="scale-[1.5]">
-                      {vibe.icon}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-3xl font-black mb-2 leading-none group-hover:translate-x-2 transition-transform duration-300">
-                      {vibe.title}
-                    </h3>
-                    <p className="text-muted-foreground font-medium group-hover:text-foreground transition-colors">
-                      {vibe.subtitle}
-                    </p>
+                {/* Illustration - Centered & Floating */}
+                <div className="absolute inset-0 flex items-center justify-center p-8">
+                  <div className="relative w-full h-[250px] transform group-hover:scale-110 group-hover:-translate-y-4 transition-all duration-700 ease-out flex items-center justify-center">
+                    <vibe.Component
+                      primaryColor={vibe.hex}
+                      height="220px"
+                      style={{ width: '100%', height: '100%' }}
+                    />
                   </div>
                 </div>
 
-                {/* Abstract Shapes */}
-                <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-foreground/5 rounded-full blur-2xl group-hover:bg-foreground/10 transition-colors" />
+                {/* Text Content - Bottom Overlay */}
+                <div className="absolute bottom-0 left-0 right-0 p-8 pt-20 bg-gradient-to-t from-background via-background/90 to-transparent">
+                  <h3 className="text-3xl font-black mb-2 leading-none group-hover:translate-x-2 transition-transform duration-300">
+                    {vibe.title}
+                  </h3>
+                  <p className="text-muted-foreground font-medium group-hover:text-foreground transition-colors">
+                    {vibe.subtitle}
+                  </p>
+                </div>
+
               </motion.div>
             ))}
           </div>
