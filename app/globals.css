@@ -206,6 +206,16 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Global Cursor Pointer Enforcement */
+  button,
+  [role="button"],
+  input[type="submit"],
+  input[type="reset"],
+  input[type="button"],
+  a {
+    cursor: pointer !important;
+  }
+
   /* Focus States - Accessibility */
   :focus-visible {
     outline: 2px solid var(--ring);

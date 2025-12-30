@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -83,7 +83,7 @@ const mockSearchResults = [
 
 const filters = ["All", "Electronics", "Fashion", "Books", "Food", "Services"];
 
-export default function SearchPage() {
+function SearchPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const initialQuery = searchParams.get("q") || "";
@@ -398,5 +398,13 @@ export default function SearchPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function SearchPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
+            <SearchPageContent />
+        </Suspense>
     );
 }

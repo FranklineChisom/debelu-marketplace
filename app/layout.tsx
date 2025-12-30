@@ -98,7 +98,9 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${manrope.variable} font-sans antialiased`}
       >
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );
