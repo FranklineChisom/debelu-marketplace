@@ -13,6 +13,7 @@ import {
     Bell,
     BellOff,
     TrendingDown,
+    Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -72,12 +73,12 @@ export default function WishlistPage() {
     };
 
     return (
-        <div className="min-h-screen bg-background pb-20">
+        <div className="flex-1 overflow-y-auto scrollbar-thin pb-4">
             {/* Header */}
-            <header className="h-14 flex items-center justify-between px-4 border-b bg-background sticky top-0 z-30">
+            <header className="h-14 flex items-center justify-between px-4 border-b bg-background/80 backdrop-blur-lg sticky top-0 z-30">
                 <button
                     onClick={() => router.back()}
-                    className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-muted transition-colors"
+                    className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-accent transition-colors"
                 >
                     <ArrowLeft className="w-5 h-5" />
                 </button>
@@ -93,18 +94,21 @@ export default function WishlistPage() {
             >
                 {items.length === 0 ? (
                     // Empty State
-                    <motion.div variants={fadeInUp} className="text-center py-16">
-                        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted flex items-center justify-center">
-                            <Heart className="w-8 h-8 text-muted-foreground" />
+                    <motion.div variants={fadeInUp} className="text-center py-20">
+                        <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-accent to-accent/50 flex items-center justify-center">
+                            <Heart className="w-10 h-10 text-muted-foreground" />
                         </div>
-                        <h2 className="font-display text-lg font-bold mb-2">
+                        <h2 className="font-display text-2xl font-bold mb-3">
                             Your wishlist is empty
                         </h2>
-                        <p className="text-sm text-muted-foreground mb-6">
+                        <p className="text-muted-foreground mb-8 max-w-xs mx-auto">
                             Save items you love and get notified when prices drop
                         </p>
                         <Link href="/explore">
-                            <Button>Start Exploring</Button>
+                            <Button variant="glow" size="lg">
+                                <Sparkles className="w-4 h-4 mr-2" />
+                                Start Exploring
+                            </Button>
                         </Link>
                     </motion.div>
                 ) : (
@@ -113,27 +117,27 @@ export default function WishlistPage() {
                             {items.length} {items.length === 1 ? "item" : "items"} saved
                         </motion.p>
 
-                        <AnimatePresence>
+                        <AnimatePresence mode="popLayout">
                             {items.map((item) => (
                                 <motion.div
                                     key={item.id}
                                     variants={fadeInUp}
                                     layout
-                                    exit={{ opacity: 0, x: -100 }}
+                                    exit={{ opacity: 0, x: -100, transition: { duration: 0.2 } }}
                                 >
-                                    <Card className="overflow-hidden">
+                                    <Card variant="premium" className="overflow-hidden">
                                         <CardContent className="p-0">
                                             <div className="flex gap-4 p-4">
                                                 {/* Image */}
                                                 <Link href={`/product/${item.id}`}>
-                                                    <div className="w-20 h-20 rounded-xl bg-muted flex-shrink-0 flex items-center justify-center text-xs text-muted-foreground">
+                                                    <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-muted to-muted/50 flex-shrink-0 flex items-center justify-center text-xs text-muted-foreground overflow-hidden">
                                                         {item.image ? (
                                                             <Image
                                                                 src={item.image}
                                                                 alt={item.name}
-                                                                width={80}
-                                                                height={80}
-                                                                className="rounded-xl object-cover"
+                                                                width={96}
+                                                                height={96}
+                                                                className="rounded-2xl object-cover"
                                                             />
                                                         ) : (
                                                             "No img"
@@ -144,7 +148,7 @@ export default function WishlistPage() {
                                                 {/* Details */}
                                                 <div className="flex-1 min-w-0">
                                                     <Link href={`/product/${item.id}`}>
-                                                        <h3 className="font-medium text-sm line-clamp-2 mb-1">
+                                                        <h3 className="font-semibold line-clamp-2 mb-1 hover:text-primary transition-colors">
                                                             {item.name}
                                                         </h3>
                                                     </Link>
@@ -152,28 +156,27 @@ export default function WishlistPage() {
                                                         {item.vendorName}
                                                     </p>
 
-                                                    <div className="flex items-baseline gap-2 mb-2">
-                                                        <span className="font-bold">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="font-bold text-lg">
                                                             {formatNaira(item.price)}
                                                         </span>
                                                         {item.originalPrice && (
                                                             <>
-                                                                <span className="text-xs text-muted-foreground line-through">
+                                                                <span className="text-sm text-muted-foreground line-through">
                                                                     {formatNaira(item.originalPrice)}
                                                                 </span>
-                                                                <Badge variant="destructive" className="text-[10px]">
+                                                                <Badge variant="destructive" className="text-[10px] font-bold">
                                                                     <TrendingDown className="w-3 h-3 mr-0.5" />
                                                                     {Math.round(
                                                                         (1 - item.price / item.originalPrice) * 100
-                                                                    )}
-                                                                    %
+                                                                    )}% off
                                                                 </Badge>
                                                             </>
                                                         )}
                                                     </div>
 
                                                     {!item.inStock && (
-                                                        <Badge variant="secondary" className="text-[10px]">
+                                                        <Badge variant="secondary" className="text-[10px] mt-2">
                                                             Out of Stock
                                                         </Badge>
                                                     )}
@@ -181,38 +184,38 @@ export default function WishlistPage() {
                                             </div>
 
                                             {/* Actions */}
-                                            <div className="flex border-t divide-x">
+                                            <div className="flex border-t">
                                                 <button
                                                     onClick={() => togglePriceAlert(item.id)}
-                                                    className="flex-1 flex items-center justify-center gap-2 py-3 text-sm hover:bg-muted transition-colors"
+                                                    className="flex-1 flex items-center justify-center gap-2 py-3.5 text-sm hover:bg-accent transition-colors"
                                                 >
                                                     {item.priceAlert ? (
                                                         <>
                                                             <Bell className="w-4 h-4 text-primary" />
-                                                            <span className="text-primary">Alert On</span>
+                                                            <span className="text-primary font-medium">Alert On</span>
                                                         </>
                                                     ) : (
                                                         <>
                                                             <BellOff className="w-4 h-4 text-muted-foreground" />
-                                                            <span className="text-muted-foreground">
-                                                                Alert Off
-                                                            </span>
+                                                            <span className="text-muted-foreground">Alert Off</span>
                                                         </>
                                                     )}
                                                 </button>
+                                                <div className="w-px bg-border" />
                                                 <button
-                                                    className="flex-1 flex items-center justify-center gap-2 py-3 text-sm hover:bg-muted transition-colors"
+                                                    className="flex-1 flex items-center justify-center gap-2 py-3.5 text-sm hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                     disabled={!item.inStock}
                                                 >
                                                     <ShoppingCart className="w-4 h-4" />
-                                                    Add to Cart
+                                                    <span className="font-medium">Add to Cart</span>
                                                 </button>
+                                                <div className="w-px bg-border" />
                                                 <button
                                                     onClick={() => removeItem(item.id)}
-                                                    className="flex-1 flex items-center justify-center gap-2 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                                                    className="flex-1 flex items-center justify-center gap-2 py-3.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
-                                                    Remove
+                                                    <span className="font-medium">Remove</span>
                                                 </button>
                                             </div>
                                         </CardContent>
