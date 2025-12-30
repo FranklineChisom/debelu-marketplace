@@ -313,19 +313,17 @@ export default function LandingPage() {
             <div className="absolute w-[400px] h-[400px] bg-emerald-500/20 rounded-full blur-[100px] animate-pulse" />
             <div className="absolute w-[300px] h-[300px] bg-cyan-500/20 rounded-full blur-[80px] translate-x-10 translate-y-10" />
 
-            {/* Central Bot Visual */}
+            {/* Central Visual - Undraw Chat */}
             <motion.div
-              className="relative z-10 w-64 h-64 bg-background rounded-[3rem] border-8 border-background shadow-2xl flex items-center justify-center transform rotate-12"
-              animate={{ y: [0, -20, 0], rotate: [12, 10, 12] }}
+              className="relative z-10 w-full h-full flex items-center justify-center p-12"
+              animate={{ y: [0, -15, 0] }}
               transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
             >
-              <div className="absolute inset-0 rounded-[2.5rem] bg-gradient-to-br from-emerald-400 to-cyan-400 opacity-20" />
-              <Bot className="w-32 h-32 text-foreground" />
-
-              {/* Floating Status */}
-              <div className="absolute -top-6 -right-6 bg-emerald-500 text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg animate-bounce">
-                ONLINE
-              </div>
+              <Undraw.UndrawChat
+                primaryColor="#10b981" // Emerald-500
+                height="400px"
+                style={{ width: '100%', height: '100%' }}
+              />
             </motion.div>
 
             {/* Orbiting Elements */}
