@@ -126,35 +126,35 @@ function RegisterForm() {
                         exit={{ opacity: 0, x: -20 }}
                         className="space-y-6"
                     >
-                        <motion.div variants={fadeInUp} className="text-center space-y-2">
-                            <h1 className="font-display text-3xl font-bold tracking-tight">
+                        <motion.div variants={fadeInUp} className="text-center space-y-4">
+                            <h1 className="font-display text-4xl lg:text-5xl font-black tracking-tighter">
                                 Join Debelu.
                             </h1>
-                            <p className="text-muted-foreground">
+                            <p className="text-muted-foreground text-lg">
                                 How would you like to use Debelu?
                             </p>
                         </motion.div>
 
-                        <motion.div variants={fadeInUp} className="grid gap-4">
+                        <motion.div variants={fadeInUp} className="space-y-4">
                             <button
                                 onClick={() => {
                                     setRole("buyer");
                                     setStep("campus");
                                 }}
-                                className="group p-5 border-2 rounded-2xl text-left hover:border-primary hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
+                                className="w-full group relative overflow-hidden rounded-3xl bg-foreground text-background p-8 lg:p-10 text-left transition-all duration-500 hover:scale-[1.02]"
                             >
-                                <div className="flex items-start gap-4">
-                                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                                        <ShoppingBag className="w-7 h-7 text-primary" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-lg">I want to shop</h3>
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                            Discover and buy products from vendors on your campus
+                                <div className="relative z-10 flex items-center justify-between">
+                                    <div>
+                                        <h3 className="font-display text-4xl lg:text-5xl font-black tracking-tighter uppercase mb-2">
+                                            Shop
+                                        </h3>
+                                        <p className="text-white/60 text-lg max-w-xs font-medium">
+                                            Find everything you need on campus.
                                         </p>
                                     </div>
-                                    <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all mt-2" />
+                                    <ArrowRight className="w-12 h-12 text-emerald-400 transform -rotate-45 group-hover:rotate-0 transition-transform duration-500" />
                                 </div>
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                             </button>
 
                             <button
@@ -162,19 +162,18 @@ function RegisterForm() {
                                     setRole("vendor");
                                     setStep("campus");
                                 }}
-                                className="group p-5 border-2 rounded-2xl text-left hover:border-primary hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
+                                className="w-full group relative overflow-hidden rounded-3xl border-2 border-foreground/10 hover:border-foreground bg-transparent p-8 lg:p-10 text-left transition-all duration-500 hover:bg-foreground hover:text-background"
                             >
-                                <div className="flex items-start gap-4">
-                                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                                        <Store className="w-7 h-7 text-primary" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-lg">I want to sell</h3>
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                            List your products and reach students on your campus
+                                <div className="relative z-10 flex items-center justify-between">
+                                    <div>
+                                        <h3 className="font-display text-4xl lg:text-5xl font-black tracking-tighter uppercase mb-2">
+                                            Sell
+                                        </h3>
+                                        <p className="text-muted-foreground group-hover:text-white/60 text-lg max-w-xs font-medium transition-colors">
+                                            Start your business on campus.
                                         </p>
                                     </div>
-                                    <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all mt-2" />
+                                    <Store className="w-12 h-12 text-foreground/20 group-hover:text-emerald-400 group-hover:scale-110 transition-all duration-500" />
                                 </div>
                             </button>
                         </motion.div>
@@ -201,11 +200,11 @@ function RegisterForm() {
                         exit={{ opacity: 0, x: -20 }}
                         className="space-y-6"
                     >
-                        <motion.div variants={fadeInUp} className="text-center space-y-2">
-                            <h1 className="font-display text-3xl font-bold tracking-tight">
+                        <motion.div variants={fadeInUp} className="text-center space-y-4">
+                            <h1 className="font-display text-4xl lg:text-5xl font-black tracking-tighter">
                                 Select your campus
                             </h1>
-                            <p className="text-muted-foreground">
+                            <p className="text-muted-foreground text-lg">
                                 This helps us show you relevant products
                             </p>
                         </motion.div>
@@ -275,11 +274,11 @@ function RegisterForm() {
                         exit={{ opacity: 0, x: -20 }}
                         className="space-y-6"
                     >
-                        <motion.div variants={fadeInUp} className="text-center space-y-2">
-                            <h1 className="font-display text-3xl font-bold tracking-tight">
+                        <motion.div variants={fadeInUp} className="text-center space-y-4">
+                            <h1 className="font-display text-4xl lg:text-5xl font-black tracking-tighter">
                                 Create your account
                             </h1>
-                            <p className="text-muted-foreground">
+                            <p className="text-muted-foreground text-lg">
                                 {role === "vendor"
                                     ? "Set up your vendor account"
                                     : "Just a few more details"}
@@ -301,8 +300,8 @@ function RegisterForm() {
                                     id="name"
                                     type="text"
                                     placeholder={role === "vendor" ? "e.g., TechHub NG" : "e.g., Chioma Adebayo"}
-                                    variant="premium"
                                     required
+                                    variant="brutalist"
                                 />
                             </div>
 
@@ -316,8 +315,8 @@ function RegisterForm() {
                                     id="phone"
                                     type="tel"
                                     placeholder="08012345678"
-                                    variant="premium"
                                     required
+                                    variant="brutalist"
                                 />
                             </div>
 
@@ -331,8 +330,8 @@ function RegisterForm() {
                                     id="email"
                                     type="email"
                                     placeholder="you@university.edu"
-                                    variant="premium"
                                     required={role === "vendor"}
+                                    variant="brutalist"
                                 />
                             </div>
 
@@ -347,7 +346,7 @@ function RegisterForm() {
                                         id="password"
                                         type={showPassword ? "text" : "password"}
                                         placeholder="••••••••"
-                                        variant="premium"
+                                        variant="brutalist"
                                         className="pr-12"
                                         required
                                     />

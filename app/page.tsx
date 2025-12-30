@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   ArrowRight,
   MessageSquare,
@@ -15,6 +16,10 @@ import {
   ArrowUpRight,
   Bot,
   Circle,
+  Monitor,
+  Gem,
+  Utensils,
+  GraduationCap,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -56,6 +61,16 @@ export default function LandingPage() {
     offset: ["start start", "end end"]
   });
 
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const y1 = useTransform(scrollYProgress, [0, 1], [0, -100]);
   const y2 = useTransform(scrollYProgress, [0, 1], [0, 100]);
   const rotate = useTransform(scrollYProgress, [0, 1], [0, 10]);
@@ -63,21 +78,24 @@ export default function LandingPage() {
   return (
     <div ref={containerRef} className="min-h-screen bg-background text-foreground overflow-x-hidden">
       {/* Minimal Fixed Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 mix-blend-difference">
-        <div className="flex items-center justify-between px-6 lg:px-12 h-20">
-          <Link href="/" className="font-display text-2xl font-black tracking-tighter text-white">
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? "bg-background/95 backdrop-blur-md border-b border-foreground/5 shadow-sm" : "bg-transparent py-4 mix-blend-difference"
+          }`}
+      >
+        <div className={`flex items-center justify-between px-6 lg:px-12 xl:px-20 transition-all duration-300 ${isScrolled ? "h-16" : "h-20"}`}>
+          <Link href="/" className={`font-display text-2xl font-black tracking-tighter transition-colors ${isScrolled ? "text-foreground" : "text-white"}`}>
             DEBELU
           </Link>
           <nav className="hidden lg:flex items-center gap-8">
-            <Link href="/explore" className="text-sm text-white/70 hover:text-white transition-colors">
+            <Link href="/explore" className={`text-sm font-medium transition-colors ${isScrolled ? "text-muted-foreground hover:text-foreground" : "text-white/70 hover:text-white"}`}>
               Explore
             </Link>
-            <Link href="/register?role=vendor" className="text-sm text-white/70 hover:text-white transition-colors">
+            <Link href="/register?role=vendor" className={`text-sm font-medium transition-colors ${isScrolled ? "text-muted-foreground hover:text-foreground" : "text-white/70 hover:text-white"}`}>
               Sell
             </Link>
           </nav>
           <Link href="/register">
-            <Button variant="ghost" className="text-white border-white/20 border hover:bg-white hover:text-black rounded-full px-6">
+            <Button variant={isScrolled ? "default" : "ghost"} className={`rounded-full px-6 ${isScrolled ? "" : "text-white border-white/20 border hover:bg-white hover:text-black"}`}>
               Start
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
@@ -89,44 +107,33 @@ export default function LandingPage() {
       <section className="min-h-screen relative">
         {/* Left Side - Giant Typography */}
         <div className="absolute inset-0 lg:w-[60%]">
-          <div className="h-full flex flex-col justify-center px-6 lg:px-12 pt-32 lg:pt-0">
+          <div className="h-full flex flex-col justify-center px-6 lg:px-12 xl:px-20 pt-48 lg:pt-28">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 1 }}
             >
-              {/* Oversized Badge */}
-              <motion.div
-                initial={{ x: -50, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="mb-8"
-              >
-                <span className="inline-flex items-center gap-2 px-4 py-2 border border-foreground/20 rounded-full text-xs uppercase tracking-[0.2em]">
-                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                  Now Live in Lagos
-                </span>
-              </motion.div>
+
 
               {/* Giant Title - Asymmetric alignment */}
               <motion.h1
-                className="font-display text-[12vw] lg:text-[10vw] xl:text-[8vw] font-black leading-[0.85] tracking-tighter"
+                className="font-display text-[11vw] lg:text-[10vw] xl:text-[9vw] font-black leading-[0.8] tracking-tighter"
                 initial={{ y: 100, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.3, duration: 0.8 }}
               >
                 SHOP
                 <br />
-                <span className="text-foreground/20">WITH</span>
+                <span className="text-foreground/20 ml-[10%]">WITH</span>
                 <br />
-                <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-violet-400 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-violet-400 bg-clip-text text-transparent ml-[5%]">
                   AI
                 </span>
               </motion.h1>
 
-              {/* Offset Description */}
+              {/* Description - Aligned with Title */}
               <motion.p
-                className="mt-8 lg:mt-12 text-lg lg:text-xl text-muted-foreground max-w-md lg:ml-[20%]"
+                className="mt-8 lg:mt-12 text-lg lg:text-xl text-muted-foreground max-w-md"
                 initial={{ y: 50, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.5 }}
@@ -134,9 +141,9 @@ export default function LandingPage() {
                 The first AI shopping assistant built for Nigerian university students. Just tell us what you need.
               </motion.p>
 
-              {/* CTA - Asymmetric placement */}
+              {/* CTA - Aligned with Title */}
               <motion.div
-                className="mt-10 flex flex-col sm:flex-row gap-4 lg:ml-[20%]"
+                className="mt-10 flex flex-col sm:flex-row gap-4"
                 initial={{ y: 50, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.6 }}
@@ -157,44 +164,70 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Right Side - Floating Chat Card (Desktop) */}
+        {/* Right Side - Floating Chat Card (Desktop) - REDESIGNED */}
         <motion.div
-          className="hidden lg:block absolute right-12 top-1/2 -translate-y-1/2 w-[380px]"
+          className="hidden lg:block absolute right-12 xl:right-24 top-1/2 -translate-y-1/2 w-[450px]"
           initial={{ x: 100, opacity: 0, rotate: 5 }}
           animate={{ x: 0, opacity: 1, rotate: 3 }}
           transition={{ delay: 0.8, duration: 0.8 }}
           style={{ y: y1 }}
         >
-          <Card className="bg-foreground text-background border-0 shadow-2xl overflow-hidden">
-            <CardContent className="p-0">
-              {/* Chat Header */}
-              <div className="flex items-center gap-3 p-5 border-b border-background/10">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-400 flex items-center justify-center">
-                  <Bot className="w-6 h-6 text-black" />
-                </div>
-                <div>
-                  <p className="font-bold">Debelu AI</p>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-xs text-background/60">Online</span>
+          <div className="relative group">
+            {/* Glow effect */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400 via-cyan-400 to-violet-400 rounded-3xl opacity-30 blur-xl group-hover:opacity-50 transition-opacity duration-500" />
+
+            <Card className="relative bg-black/90 text-white border-white/10 shadow-2xl overflow-hidden backdrop-blur-xl rounded-3xl transform group-hover:scale-[1.02] transition-transform duration-500 border-2">
+              <CardContent className="p-0">
+                {/* Chat Header */}
+                <div className="flex items-center justify-between p-6 border-b border-white/10 bg-white/5">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-400 flex items-center justify-center shadow-lg shadow-emerald-400/20">
+                      <Bot className="w-7 h-7 text-black" />
+                    </div>
+                    <div>
+                      <p className="font-display font-black text-xl tracking-tight">Debelu AI</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="relative flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                        </span>
+                        <span className="text-xs font-medium text-emerald-400 tracking-wide uppercase">Online</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="w-2 h-2 rounded-full bg-white/20" />
+                    <span className="w-2 h-2 rounded-full bg-white/20" />
                   </div>
                 </div>
-              </div>
-              {/* Messages */}
-              <div className="p-5 space-y-4">
-                <div className="flex justify-end">
-                  <div className="bg-background/20 rounded-2xl rounded-br-sm px-4 py-3 max-w-[80%] text-sm">
-                    {chatPreviewMessages[0].content}
+
+                {/* Messages */}
+                <div className="p-6 space-y-6 min-h-[300px] flex flex-col justify-end">
+                  <div className="flex justify-end">
+                    <div className="bg-white/10 rounded-2xl rounded-tr-sm px-6 py-4 max-w-[85%] text-base font-medium backdrop-blur-sm border border-white/5">
+                      {chatPreviewMessages[0].content}
+                    </div>
+                  </div>
+                  <div className="flex justify-start">
+                    <div className="bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-2xl rounded-tl-sm px-6 py-4 max-w-[85%] text-base font-medium border border-emerald-500/30 text-emerald-50 shadow-lg shadow-emerald-900/10">
+                      <Sparkles className="w-4 h-4 text-emerald-400 mb-2" />
+                      {chatPreviewMessages[1].content}
+                    </div>
+                  </div>
+
+                  {/* Input Simulation */}
+                  <div className="mt-4 relative">
+                    <div className="h-14 w-full bg-white/5 rounded-xl border border-white/10 flex items-center px-4 text-white/30 text-sm">
+                      Type a message...
+                      <div className="ml-auto w-8 h-8 rounded-lg bg-emerald-400/20 flex items-center justify-center">
+                        <ArrowRight className="w-4 h-4 text-emerald-400" />
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="flex justify-start">
-                  <div className="bg-gradient-to-r from-emerald-400/20 to-cyan-400/20 rounded-2xl rounded-bl-sm px-4 py-3 max-w-[80%] text-sm border border-emerald-400/30">
-                    {chatPreviewMessages[1].content}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </motion.div>
 
         {/* Floating Elements */}
@@ -205,25 +238,10 @@ export default function LandingPage() {
         >
           <div className="w-20 h-20 rounded-full border border-foreground/10" />
         </motion.div>
-
-        {/* Scroll Indicator */}
-        <motion.div
-          className="absolute bottom-8 left-1/2 -translate-x-1/2"
-          animate={{ y: [0, 10, 0] }}
-          transition={{ repeat: Infinity, duration: 2 }}
-        >
-          <div className="w-6 h-10 rounded-full border-2 border-foreground/20 flex items-start justify-center p-2">
-            <motion.div
-              className="w-1 h-2 bg-foreground/40 rounded-full"
-              animate={{ y: [0, 8, 0] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-            />
-          </div>
-        </motion.div>
       </section>
 
       {/* STATS - Horizontal Marquee Style */}
-      <section className="py-6 border-y border-foreground/10 overflow-hidden">
+      <section className="mt-10 py-6 border-y border-foreground/10 overflow-hidden">
         <motion.div
           className="flex gap-16 whitespace-nowrap"
           animate={{ x: [0, -500] }}
@@ -244,120 +262,155 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
-      {/* FEATURES - Offset Grid */}
-      <section className="py-24 lg:py-40 px-6 lg:px-12">
-        <div className="max-w-7xl mx-auto">
-          {/* Section Title - Off-center */}
+      {/* THE ANTI-MARKETPLACE STATEMENT */}
+      <section className="mt-10 py-32 lg:py-48 px-6 lg:px-12 xl:px-20 bg-foreground text-background relative overflow-hidden">
+        <div className="w-full relative z-10">
           <motion.div
-            className="mb-20 lg:ml-[25%]"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="max-w-4xl"
+          >
+            <h2 className="text-5xl lg:text-8xl font-black tracking-tighter leading-[0.9] mb-12">
+              THIS IS NOT<br />
+              <span className="text-foreground/20">A STORE.</span>
+            </h2>
+            <div className="flex flex-col lg:flex-row gap-12 lg:gap-24 items-start">
+              <p className="text-xl lg:text-2xl font-medium max-w-lg leading-relaxed text-background/80">
+                Marketplaces are boring. Scrolling is outdated. Debelu is your personal shopper, negotiator, and delivery guy. All in one chat.
+              </p>
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full border border-background/20 flex items-center justify-center">
+                    <MessageSquare className="w-5 h-5" />
+                  </div>
+                  <p className="text-lg font-bold">You ask.</p>
+                </div>
+                <div className="w-px h-8 bg-background/20 ml-6" />
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full border border-background/20 flex items-center justify-center">
+                    <Bot className="w-5 h-5" />
+                  </div>
+                  <p className="text-lg font-bold">AI Finds.</p>
+                </div>
+                <div className="w-px h-8 bg-background/20 ml-6" />
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-background text-foreground flex items-center justify-center">
+                    <Zap className="w-5 h-5" />
+                  </div>
+                  <p className="text-lg font-bold">You get.</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* The Main Thing - AI Visual */}
+        <div className="absolute top-1/2 -translate-y-1/2 -right-40 lg:right-20 w-[600px] h-[600px] opacity-20 lg:opacity-100 pointer-events-none lg:pointer-events-auto">
+          <div className="relative w-full h-full flex items-center justify-center">
+            {/* Glowing Orbs */}
+            <div className="absolute w-[400px] h-[400px] bg-emerald-500/20 rounded-full blur-[100px] animate-pulse" />
+            <div className="absolute w-[300px] h-[300px] bg-cyan-500/20 rounded-full blur-[80px] translate-x-10 translate-y-10" />
+
+            {/* Central Bot Visual */}
+            <motion.div
+              className="relative z-10 w-64 h-64 bg-background rounded-[3rem] border-8 border-background shadow-2xl flex items-center justify-center transform rotate-12"
+              animate={{ y: [0, -20, 0], rotate: [12, 10, 12] }}
+              transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
+            >
+              <div className="absolute inset-0 rounded-[2.5rem] bg-gradient-to-br from-emerald-400 to-cyan-400 opacity-20" />
+              <Bot className="w-32 h-32 text-foreground" />
+
+              {/* Floating Status */}
+              <div className="absolute -top-6 -right-6 bg-emerald-500 text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg animate-bounce">
+                ONLINE
+              </div>
+            </motion.div>
+
+            {/* Orbiting Elements */}
+            <motion.div
+              className="absolute z-0 w-[500px] h-[500px] border border-white/10 rounded-full"
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
+            >
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 w-6 h-6 bg-white/20 rounded-full backdrop-blur-md" />
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* SHOP YOUR VIBE - Lifestyle Collections */}
+      <section className="py-32 lg:py-48 px-6 lg:px-12 xl:px-20 overflow-hidden">
+        <div className="w-full">
+          <motion.div
+            className="mb-20 flex flex-col lg:flex-row items-end justify-between gap-8"
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-4">
-              Why Choose Us
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-4">
+                Curated Collections
+              </p>
+              <h2 className="text-4xl lg:text-6xl font-black tracking-tight">
+                WHAT'S YOUR<br />
+                <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">VIBE?</span>
+              </h2>
+            </div>
+            <p className="text-muted-foreground max-w-xs text-right hidden lg:block">
+              Forget categories. Shop by lifestyle. Curated essentials for every student persona.
             </p>
-            <h2 className="text-4xl lg:text-6xl font-black tracking-tight">
-              BUILT<br />
-              <span className="text-foreground/20">DIFFERENT</span>
-            </h2>
           </motion.div>
 
-          {/* Asymmetric Feature Grid */}
-          <div className="space-y-8">
-            {features.map((feature, i) => (
+          {/* Vibe Cards - Horizontal Scroll / Grid Hybrid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { title: "The Tech Bro", subtitle: "Setups, Gadgets & Coffee", icon: <Monitor className="w-6 h-6" />, color: "from-blue-500/20 to-cyan-500/20", border: "border-blue-500/20" },
+              { title: "The Slay Queen", subtitle: "Fashion, Skincare & Glam", icon: <Gem className="w-6 h-6" />, color: "from-pink-500/20 to-rose-500/20", border: "border-pink-500/20" },
+              { title: "The Foodie", subtitle: "Midnight Snacks & Meals", icon: <Utensils className="w-6 h-6" />, color: "from-orange-500/20 to-yellow-500/20", border: "border-orange-500/20" },
+              { title: "The Scholar", subtitle: "Books, Lamps & Essentials", icon: <GraduationCap className="w-6 h-6" />, color: "from-emerald-500/20 to-green-500/20", border: "border-emerald-500/20" },
+            ].map((vibe, i) => (
               <motion.div
-                key={feature.title}
-                className={`flex flex-col lg:flex-row items-start gap-6 lg:gap-12 ${i % 2 === 0 ? 'lg:ml-0' : 'lg:ml-[20%]'
-                  }`}
-                initial={{ opacity: 0, x: i % 2 === 0 ? -50 : 50 }}
-                whileInView={{ opacity: 1, x: 0 }}
+                key={vibe.title}
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
+                className={`group relative h-[400px] rounded-3xl overflow-hidden border ${vibe.border} bg-background cursor-pointer`}
               >
-                {/* Number */}
-                <span className="text-8xl lg:text-[12rem] font-black text-foreground/5 leading-none">
-                  {feature.number}
-                </span>
+                {/* Gradient Background */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${vibe.color} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
 
-                {/* Content */}
-                <div className="flex-1 max-w-md -mt-4 lg:-mt-16">
-                  <div className="w-14 h-14 rounded-2xl bg-foreground text-background flex items-center justify-center mb-6">
-                    <feature.icon className="w-6 h-6" />
+                <div className="absolute inset-0 p-8 flex flex-col justify-between">
+                  <div className="w-16 h-16 rounded-2xl bg-background/50 backdrop-blur-md border border-foreground/5 flex items-center justify-center text-foreground shadow-sm group-hover:scale-110 transition-transform duration-500">
+                    {/* Icon Wrapper to scale it up */}
+                    <div className="scale-[1.5]">
+                      {vibe.icon}
+                    </div>
                   </div>
-                  <h3 className="text-2xl lg:text-3xl font-bold mb-3">
-                    {feature.title}
-                  </h3>
-                  <p className="text-muted-foreground text-lg">
-                    {feature.description}
-                  </p>
+
+                  <div>
+                    <h3 className="text-3xl font-black mb-2 leading-none group-hover:translate-x-2 transition-transform duration-300">
+                      {vibe.title}
+                    </h3>
+                    <p className="text-muted-foreground font-medium group-hover:text-foreground transition-colors">
+                      {vibe.subtitle}
+                    </p>
+                  </div>
                 </div>
+
+                {/* Abstract Shapes */}
+                <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-foreground/5 rounded-full blur-2xl group-hover:bg-foreground/10 transition-colors" />
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CATEGORIES - Scattered, Organic Layout */}
-      <section className="py-24 lg:py-32 bg-foreground text-background relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12">
-          <motion.h2
-            className="text-5xl lg:text-7xl font-black mb-16"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-          >
-            FIND<br />ANYTHING
-          </motion.h2>
-
-          {/* Scattered Categories */}
-          <div className="relative h-[500px] lg:h-[600px]">
-            {PRODUCT_CATEGORIES.slice(0, 10).map((category, i) => {
-              // Random-ish positioning for organic feel
-              const positions = [
-                { top: '5%', left: '10%' },
-                { top: '15%', left: '60%' },
-                { top: '30%', left: '5%' },
-                { top: '25%', left: '75%' },
-                { top: '45%', left: '30%' },
-                { top: '50%', left: '70%' },
-                { top: '65%', left: '10%' },
-                { top: '70%', left: '50%' },
-                { top: '80%', left: '25%' },
-                { top: '85%', left: '75%' },
-              ];
-              const pos = positions[i];
-              const sizes = ['text-2xl', 'text-3xl', 'text-4xl', 'text-xl', 'text-3xl'];
-              const size = sizes[i % sizes.length];
-
-              return (
-                <motion.div
-                  key={category.id}
-                  className={`absolute cursor-pointer group`}
-                  style={{ top: pos.top, left: pos.left }}
-                  initial={{ opacity: 0, scale: 0.5 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.05 }}
-                  whileHover={{ scale: 1.1 }}
-                >
-                  <span className={`${size} font-bold text-background/40 group-hover:text-emerald-400 transition-colors`}>
-                    {category.emoji} {category.name}
-                  </span>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Decorative Circle */}
-        <div className="absolute -right-40 top-1/2 -translate-y-1/2 w-80 h-80 rounded-full border border-background/10" />
-      </section>
-
       {/* CAMPUSES - Minimal List */}
-      <section className="py-24 lg:py-40 px-6 lg:px-12">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-start">
+      <section className="py-32 lg:py-48 px-6 lg:px-12 xl:px-20">
+        <div className="w-full">
+          <div className="grid lg:grid-cols-2 gap-20 lg:gap-32 items-start">
             {/* Left - Title */}
             <motion.div
               initial={{ opacity: 0, y: 50 }}
@@ -380,7 +433,7 @@ export default function LandingPage() {
 
             {/* Right - Campus List */}
             <div className="space-y-0 border-t border-foreground/10">
-              {CAMPUSES.map((campus, i) => (
+              {CAMPUSES.slice(0, 6).map((campus, i) => (
                 <motion.div
                   key={campus.id}
                   className="flex items-center justify-between py-6 border-b border-foreground/10 group cursor-pointer hover:pl-4 transition-all"
@@ -398,6 +451,13 @@ export default function LandingPage() {
                   <ArrowUpRight className="w-5 h-5 text-foreground/20 group-hover:text-emerald-400 group-hover:rotate-45 transition-all" />
                 </motion.div>
               ))}
+              <div className="pt-6">
+                <Link href="/register?role=campus">
+                  <Button variant="link" className="text-muted-foreground hover:text-foreground p-0 h-auto">
+                    View all campuses <ArrowRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -409,7 +469,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-400/10 via-cyan-400/5 to-violet-400/10" />
         <div className="absolute inset-0 bg-grid opacity-30" />
 
-        <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
+        <div className="relative z-10 max-w-4xl mx-auto px-6 lg:px-12 xl:px-20 text-center">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             whileInView={{ opacity: 1, scale: 1 }}
@@ -436,8 +496,8 @@ export default function LandingPage() {
       </section>
 
       {/* FOOTER - Minimal */}
-      <footer className="border-t border-foreground/10 py-12 px-6 lg:px-12">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+      <footer className="border-t border-foreground/10 py-12 px-6 lg:px-12 xl:px-20">
+        <div className="w-full flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
           <div>
             <Link href="/" className="font-display text-xl font-black tracking-tighter">
               DEBELU
@@ -454,7 +514,7 @@ export default function LandingPage() {
             <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
           </div>
         </div>
-        <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-foreground/10 text-center text-sm text-muted-foreground">
+        <div className="w-full mt-12 pt-8 border-t border-foreground/10 text-center text-sm text-muted-foreground">
           <p>© 2024 Debelu. Made in Nigeria 🇳🇬</p>
         </div>
       </footer>

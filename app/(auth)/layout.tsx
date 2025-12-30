@@ -9,7 +9,7 @@ export default function AuthLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="min-h-screen flex bg-background text-foreground overflow-hidden">
+        <div className="h-screen flex bg-background text-foreground overflow-hidden">
             {/* Left Side - Branding (Desktop Only) */}
             <motion.div
                 className="hidden lg:flex lg:w-1/2 xl:w-[55%] bg-foreground text-background relative overflow-hidden"
@@ -18,7 +18,7 @@ export default function AuthLayout({
                 transition={{ duration: 0.8 }}
             >
                 {/* Giant Typography */}
-                <div className="absolute inset-0 flex items-center justify-center p-12">
+                <div className="absolute inset-0 flex items-center justify-center p-12 xl:p-20">
                     <div className="relative">
                         <motion.h1
                             className="text-[15vw] font-black leading-[0.8] tracking-tighter"
@@ -61,7 +61,7 @@ export default function AuthLayout({
             </motion.div>
 
             {/* Right Side - Form */}
-            <div className="w-full lg:w-1/2 xl:w-[45%] flex flex-col">
+            <div className="w-full lg:w-1/2 xl:w-[45%] flex flex-col h-full overflow-y-auto scrollbar-thin">
                 {/* Mobile Header */}
                 <header className="lg:hidden h-16 flex items-center justify-center px-6 border-b border-foreground/10">
                     <Link href="/" className="text-xl font-black tracking-tighter">

@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 export interface InputProps
     extends React.InputHTMLAttributes<HTMLInputElement> {
-    variant?: "default" | "premium" | "ghost";
+    variant?: "default" | "premium" | "ghost" | "brutalist";
     error?: boolean;
 }
 
@@ -18,9 +18,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
                     // Default variant
                     variant === "default" && [
                         "h-12 px-4 py-3",
-                        "bg-background border-2 border-input",
-                        "hover:border-primary/40",
-                        "focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10",
+                        "bg-background border-2 border-input/60",
+                        "hover:border-foreground/30",
+                        "focus:outline-none focus:border-foreground focus:ring-4 focus:ring-foreground/5",
                         "shadow-sm hover:shadow-md focus:shadow-md",
                     ],
                     // Premium variant with enhanced focus
@@ -35,9 +35,18 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
                     // Ghost variant (minimal)
                     variant === "ghost" && [
                         "h-12 px-4 py-3",
-                        "bg-transparent border-0 border-b-2 border-input rounded-none",
-                        "hover:border-primary/50",
-                        "focus:outline-none focus:border-primary",
+                        "bg-transparent border-0 border-b-2 border-input/60 rounded-none",
+                        "hover:border-foreground/30",
+                        "focus:outline-none focus:border-foreground",
+                    ],
+                    // Brutalist variant (underlined, bold)
+                    variant === "brutalist" && [
+                        "h-14 px-0 py-3",
+                        "bg-transparent border-0 border-b-2 border-foreground/20 rounded-none",
+                        "text-lg placeholder:text-foreground/30",
+                        "hover:border-foreground/50",
+                        "focus:outline-none focus:border-foreground focus:ring-0",
+                        "transition-colors duration-300",
                     ],
                     // Error state
                     error && [
@@ -58,7 +67,7 @@ Input.displayName = "Input";
 // Enhanced Textarea with same styling
 export interface TextareaProps
     extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
-    variant?: "default" | "premium";
+    variant?: "default" | "premium" | "brutalist";
     error?: boolean;
 }
 
@@ -84,6 +93,14 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
                         "hover:border-primary/50 hover:bg-accent/30",
                         "focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15",
                         "shadow-elevation-1 hover:shadow-elevation-2 focus:shadow-elevation-2",
+                    ],
+                    // Brutalist variant
+                    variant === "brutalist" && [
+                        "min-h-[120px] px-0 py-3",
+                        "bg-transparent border-0 border-b-2 border-foreground/20 rounded-none",
+                        "text-lg placeholder:text-foreground/30",
+                        "hover:border-foreground/50",
+                        "focus:outline-none focus:border-foreground focus:ring-0",
                     ],
                     // Error state
                     error && [
