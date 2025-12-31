@@ -20,10 +20,11 @@ import {
     Ticket,
     Package,
     Wrench,
+    Loader2,
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +33,8 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { formatNaira, cn } from "@/lib/utils";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 import { PRODUCT_CATEGORIES } from "@/lib/constants";
+import { useMarketplaceStore } from "@/stores/useMarketplaceStore";
+import { Product } from "@/types/product";
 
 // Mock Data for Bento Grid
 const FEATURED_ITEMS = [
@@ -99,6 +102,48 @@ export default function ExplorePage() {
     const { scrollYProgress } = useScroll({ container: containerRef });
     const [activeFilter, setActiveFilter] = useState("All");
     const [showAllCategories, setShowAllCategories] = useState(false);
+
+    // Fetch products from store
+    const storeProducts = useMarketplaceStore((state) => state.products);
+    const fetchInitialData = useMarketplaceStore((state) => state.fetchInitialData);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        async function loadProducts() {
+            try {
+                await fetchInitialData();
+            } catch (error) {
+                console.error("Failed to fetch products:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        if (storeProducts.length === 0) {
+            loadProducts();
+        } else {
+            setIsLoading(false);
+        }
+    }, [fetchInitialData, storeProducts.length]);
+
+    // Map store products to bento grid format with fallback
+    const bentoSpans = [
+        "col-span-12 md:col-span-8 row-span-2",
+        "col-span-6 md:col-span-4 row-span-1",
+        "col-span-6 md:col-span-4 row-span-1",
+        "col-span-6 md:col-span-4 row-span-2",
+        "col-span-6 md:col-span-4 row-span-1",
+        "col-span-12 md:col-span-4 row-span-1",
+    ];
+
+    const featuredItems = storeProducts.slice(0, 6).map((p, i) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        image: p.images?.[0]?.url || "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?q=80&w=2670&auto=format&fit=crop",
+        category: p.category,
+        span: bentoSpans[i % bentoSpans.length],
+        dark: i % 2 === 0,
+    }));
 
     const headerOpacity = useTransform(scrollYProgress, [0, 0.1], [0, 1]);
 
@@ -194,61 +239,67 @@ export default function ExplorePage() {
                     </div>
 
                     {/* Bento Grid */}
-                    <div className="grid grid-cols-12 gap-4 auto-rows-[250px]">
-                        {FEATURED_ITEMS.map((item, i) => (
-                            <motion.div
-                                key={item.id}
-                                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                                whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                                viewport={{ once: true, margin: "-50px" }}
-                                transition={{ duration: 0.5, delay: i * 0.1 }}
-                                className={cn(
-                                    "group relative rounded-3xl overflow-hidden cursor-pointer bg-muted transition-all duration-500 hover:shadow-2xl hover:shadow-primary/5",
-                                    item.span
-                                )}
-                                onClick={() => router.push(`/product/${item.id}`)}
-                            >
-                                {/* Image Background */}
-                                <Image
-                                    src={item.image}
-                                    alt={item.name}
-                                    fill
-                                    className="object-cover transition-transform duration-700 group-hover:scale-110"
-                                />
+                    {isLoading ? (
+                        <div className="flex items-center justify-center py-20">
+                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-12 gap-4 auto-rows-[250px]">
+                            {featuredItems.map((item, i) => (
+                                <motion.div
+                                    key={item.id}
+                                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                                    whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                                    viewport={{ once: true, margin: "-50px" }}
+                                    transition={{ duration: 0.5, delay: i * 0.1 }}
+                                    className={cn(
+                                        "group relative rounded-3xl overflow-hidden cursor-pointer bg-muted transition-all duration-500 hover:shadow-2xl hover:shadow-primary/5",
+                                        item.span
+                                    )}
+                                    onClick={() => router.push(`/product/${item.id}`)}
+                                >
+                                    {/* Image Background */}
+                                    <Image
+                                        src={item.image}
+                                        alt={item.name}
+                                        fill
+                                        className="object-cover transition-transform duration-700 group-hover:scale-110"
+                                    />
 
-                                {/* Overlay Gradient */}
-                                <div className={cn(
-                                    "absolute inset-0 transition-opacity duration-300",
-                                    item.dark
-                                        ? "bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-70" :
-                                        "bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-30 group-hover:opacity-40"
-                                )} />
+                                    {/* Overlay Gradient */}
+                                    <div className={cn(
+                                        "absolute inset-0 transition-opacity duration-300",
+                                        item.dark
+                                            ? "bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-70" :
+                                            "bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-30 group-hover:opacity-40"
+                                    )} />
 
-                                {/* Content */}
-                                <div className="absolute inset-x-0 bottom-0 p-6 flex flex-col justify-end">
-                                    <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <Badge variant="secondary" className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-md border-none">
-                                                {item.category}
-                                            </Badge>
-                                            <Button
-                                                size="icon"
-                                                variant="secondary"
-                                                className="w-8 h-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/20 hover:bg-white/40 text-white backdrop-blur-md border-none"
-                                            >
-                                                <Heart className="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                        <h3 className="text-2xl font-bold text-white mb-1 leading-tight">{item.name}</h3>
-                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75 text-white/90">
-                                            <span className="font-semibold">{formatNaira(item.price)}</span>
-                                            <ArrowRight className="w-4 h-4" />
+                                    {/* Content */}
+                                    <div className="absolute inset-x-0 bottom-0 p-6 flex flex-col justify-end">
+                                        <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <Badge variant="secondary" className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-md border-none">
+                                                    {item.category}
+                                                </Badge>
+                                                <Button
+                                                    size="icon"
+                                                    variant="secondary"
+                                                    className="w-8 h-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/20 hover:bg-white/40 text-white backdrop-blur-md border-none"
+                                                >
+                                                    <Heart className="w-4 h-4" />
+                                                </Button>
+                                            </div>
+                                            <h3 className="text-2xl font-bold text-white mb-1 leading-tight">{item.name}</h3>
+                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75 text-white/90">
+                                                <span className="font-semibold">{formatNaira(item.price)}</span>
+                                                <ArrowRight className="w-4 h-4" />
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    )}
                 </motion.div>
 
                 {/* Categories Strip */}

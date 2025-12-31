@@ -18,7 +18,8 @@ import {
     ChevronDown,
     Star,
     Check,
-    SlidersHorizontal
+    SlidersHorizontal,
+    Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -35,135 +36,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn, formatNaira } from "@/lib/utils";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 import { PRODUCT_CATEGORIES } from "@/lib/constants";
+import { useMarketplaceStore } from "@/stores/useMarketplaceStore";
 
-// --- Mock Data ---
-
-const MOCK_RESULTS = [
-    {
-        id: "1",
-        name: "Dell Inspiron 15 Laptop - Core i5, 8GB RAM",
-        price: 165000,
-        compareAtPrice: 195000,
-        image: "https://images.unsplash.com/photo-1593642702749-b7d2a804fbcf?q=80&w=800&auto=format&fit=crop",
-        vendorName: "TechHub NG",
-        rating: 4.8,
-        reviewCount: 24,
-        category: "electronics"
-    },
-    {
-        id: "2",
-        name: "HP Pavilion 14 Laptop",
-        price: 145000,
-        image: "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?q=80&w=800&auto=format&fit=crop",
-        vendorName: "CompStation",
-        rating: 4.5,
-        reviewCount: 12,
-        category: "electronics"
-    },
-    {
-        id: "3",
-        name: "Logitech MX Master 3S",
-        price: 85000,
-        image: "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?q=80&w=800&auto=format&fit=crop",
-        vendorName: "GadgetWorld",
-        rating: 4.9,
-        reviewCount: 156,
-        category: "accessories"
-    },
-    {
-        id: "4",
-        name: "Nike Air Jordan 1 High",
-        price: 75000,
-        image: "https://images.unsplash.com/photo-1552346154-21d32810aba3?q=80&w=800&auto=format&fit=crop",
-        vendorName: "Campus Kicks",
-        rating: 4.7,
-        reviewCount: 45,
-        category: "fashion"
-    },
-    {
-        id: "5",
-        name: "Calculus: Early Transcendentals",
-        price: 25000,
-        image: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=800&auto=format&fit=crop",
-        vendorName: "Book Worms",
-        rating: 4.9,
-        reviewCount: 8,
-        category: "books"
-    },
-    {
-        id: "6",
-        name: "Apple AirPods Pro 2nd Gen",
-        price: 120000,
-        compareAtPrice: 140000,
-        image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?q=80&w=800&auto=format&fit=crop",
-        vendorName: "GadgetWorld",
-        rating: 4.9,
-        reviewCount: 234,
-        category: "electronics"
-    },
-    {
-        id: "7",
-        name: "Samsung Galaxy Watch 5",
-        price: 95000,
-        image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=800&auto=format&fit=crop",
-        vendorName: "TechHub NG",
-        rating: 4.6,
-        reviewCount: 67,
-        category: "electronics"
-    },
-    {
-        id: "8",
-        name: "Vintage Band Tee - Nirvana",
-        price: 8500,
-        image: "https://images.unsplash.com/photo-1576566588028-4147f3842f27?q=80&w=800&auto=format&fit=crop",
-        vendorName: "Thrift Kings",
-        rating: 4.4,
-        reviewCount: 19,
-        category: "fashion"
-    },
-    {
-        id: "9",
-        name: "LED Desk Lamp - Wireless Charging",
-        price: 18000,
-        compareAtPrice: 22000,
-        image: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?q=80&w=800&auto=format&fit=crop",
-        vendorName: "DeskSetup",
-        rating: 4.7,
-        reviewCount: 89,
-        category: "home"
-    },
-    {
-        id: "10",
-        name: "Anker PowerCore 20000mAh",
-        price: 15000,
-        image: "https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?q=80&w=800&auto=format&fit=crop",
-        vendorName: "GadgetWorld",
-        rating: 4.8,
-        reviewCount: 312,
-        category: "accessories"
-    },
-    {
-        id: "11",
-        name: "Hostel Single Mattress - Memory Foam",
-        price: 35000,
-        image: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=800&auto=format&fit=crop",
-        vendorName: "Campus Living",
-        rating: 4.3,
-        reviewCount: 28,
-        category: "home"
-    },
-    {
-        id: "12",
-        name: "Backpack - 40L Travel Bag",
-        price: 22000,
-        compareAtPrice: 28000,
-        image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?q=80&w=800&auto=format&fit=crop",
-        vendorName: "CampusBags",
-        rating: 4.6,
-        reviewCount: 156,
-        category: "fashion"
-    },
-];
+// Mock results removed - now fetching from useMarketplaceStore
 
 
 const RECENT_SEARCHES = ["MacBook Pro", "Anime Hoodie", "Calculus Textbook", "Gaming Mouse"];
@@ -235,8 +110,9 @@ function FilterSidebar({ className }: { className?: string }) {
 }
 
 import { ProductCard } from "@/components/shared/ProductCard";
+import { ProductSummary } from "@/types/product";
 
-function ProductGrid({ results, viewMode }: { results: typeof MOCK_RESULTS, viewMode: "grid" | "list" }) {
+function ProductGrid({ results, viewMode }: { results: ProductSummary[], viewMode: "grid" | "list" }) {
     return (
         <motion.div
             layout
@@ -266,9 +142,51 @@ function SearchPageContent() {
     const searchParams = useSearchParams();
     const initialQuery = searchParams.get("q") || "";
     const [query, setQuery] = useState(initialQuery);
-    const [results, setResults] = useState(initialQuery ? MOCK_RESULTS : []);
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
     const [sortBy, setSortBy] = useState<"relevance" | "price-low" | "price-high" | "rating" | "newest">("relevance");
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Fetch products from store
+    const storeProducts = useMarketplaceStore((state) => state.products);
+    const fetchInitialData = useMarketplaceStore((state) => state.fetchInitialData);
+
+    useEffect(() => {
+        async function loadData() {
+            if (storeProducts.length === 0) {
+                try {
+                    await fetchInitialData();
+                } catch (error) {
+                    console.error("Failed to fetch products:", error);
+                }
+            }
+            setIsLoading(false);
+        }
+        loadData();
+    }, [fetchInitialData, storeProducts.length]);
+
+    // Filter products based on search query
+    const filteredResults = storeProducts.filter((product) => {
+        if (!query) return true;
+        const lowerQuery = query.toLowerCase();
+        return (
+            product.name.toLowerCase().includes(lowerQuery) ||
+            product.description?.toLowerCase().includes(lowerQuery) ||
+            product.category?.toLowerCase().includes(lowerQuery)
+        );
+    }).map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        compareAtPrice: p.compareAtPrice,
+        image: p.images?.[0]?.url || "https://images.unsplash.com/photo-1593642702749-b7d2a804fbcf?q=80&w=800&auto=format&fit=crop",
+        vendorName: p.vendorId,
+        rating: p.rating || 0,
+        reviewCount: p.reviewCount || 0,
+        category: p.category,
+        vendorId: p.vendorId,
+        stock: p.stock,
+        campusId: p.campusId,
+    }));
 
     const sortOptions = [
         { value: "relevance", label: "Most Relevant" },
@@ -278,7 +196,7 @@ function SearchPageContent() {
         { value: "newest", label: "Newest First" },
     ];
 
-    const sortedResults = [...results].sort((a, b) => {
+    const sortedResults = [...filteredResults].sort((a, b) => {
         switch (sortBy) {
             case "price-low": return a.price - b.price;
             case "price-high": return b.price - a.price;
@@ -288,6 +206,7 @@ function SearchPageContent() {
     });
 
     const isSearching = query.length > 0;
+    const results = sortedResults;
 
 
     return (
@@ -307,7 +226,7 @@ function SearchPageContent() {
                             value={query}
                             onChange={(e) => {
                                 setQuery(e.target.value);
-                                setResults(e.target.value ? MOCK_RESULTS : []);
+                                // Results are now derived from store, no need to set
                             }}
                             placeholder="What are you looking for?"
                             className="w-full pl-10 h-11 rounded-full bg-muted/50 border-transparent focus:border-primary/50 focus:bg-background transition-all"
@@ -410,7 +329,7 @@ function SearchPageContent() {
                                         <ShoppingBag className="w-4 h-4" />
                                         Recommended for you
                                     </h2>
-                                    <ProductGrid results={MOCK_RESULTS} viewMode={viewMode} />
+                                    <ProductGrid results={results.slice(0, 6)} viewMode={viewMode} />
                                 </motion.div>
                             </motion.div>
                         ) : (

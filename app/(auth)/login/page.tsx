@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
+import { createClient } from "@/utils/supabase/client";
 import { Eye, EyeOff, ArrowRight, Lock, Mail, Phone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -45,21 +46,27 @@ export default function LoginPage() {
     const onSubmit = async (values: LoginFormValues) => {
         setIsLoading(true);
 
-        toast.promise(
-            new Promise((resolve) => setTimeout(resolve, 1500)),
-            {
-                loading: 'Signing in...',
-                success: () => {
-                    setTimeout(() => {
-                        router.push("/chat");
-                    }, 500);
-                    return "Welcome back!";
-                },
-                error: 'Invalid credentials. Please try again.',
-            }
-        );
+        const supabase = createClient();
 
-        setIsLoading(false);
+        try {
+            const { error } = await supabase.auth.signInWithPassword({
+                email: values.email,
+                password: values.password,
+            });
+
+            if (error) {
+                toast.error(error.message);
+                setIsLoading(false);
+                return;
+            }
+
+            toast.success("Welcome back!");
+            router.push("/chat");
+            router.refresh();
+        } catch (error) {
+            toast.error("Something went wrong. Please try again.");
+            setIsLoading(false);
+        }
     };
 
     return (

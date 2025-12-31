@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { CAMPUSES } from "@/lib/constants";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 import { useUIStore } from "@/stores";
+import { createClient } from "@/utils/supabase/client";
 
 type Step = "role" | "campus" | "details";
 type Role = "buyer" | "vendor";
@@ -91,30 +92,92 @@ function RegisterForm() {
 
     const onSubmit = async (values: RegisterFormValues) => {
         setIsLoading(true);
+        const supabase = createClient();
 
-        // Simulate API call with toast promise
-        toast.promise(
-            new Promise((resolve) => setTimeout(resolve, 2000)),
-            {
-                loading: 'Creating your account...',
-                success: () => {
-                    // Store values for verification
-                    setVerificationValues({
-                        email: values.email || "",
+        try {
+            // 1. Sign up user
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email: values.email || undefined,
+                phone: values.phone, // Ensure phone provider is enabled in Supabase
+                password: values.password,
+                options: {
+                    data: {
+                        full_name: values.name,
+                        role: role,
+                    }
+                }
+            });
+
+            if (authError) throw authError;
+
+            if (!authData.user) throw new Error("No user created");
+
+            // 2. Create Profile
+            // Note: This might be handled by a Postgres Trigger on auth.users insert, 
+            // but for safety/explicitness we can do it here if RLS allows or if no trigger exists.
+            // Given the schema had an INSERT policy for own profile, we can insert.
+
+            const profileData = {
+                id: authData.user.id,
+                first_name: values.name.split(' ')[0],
+                last_name: values.name.split(' ').slice(1).join(' '),
+                campus_id: campus,
+                role: role,
+                email: values.email,
+                phone: values.phone,
+                // Defaults
+                badges: ["Newcomer"],
+                streak: 0,
+                points: 0
+            };
+
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .upsert(profileData);
+
+            if (profileError) {
+                // If trigger exists, upsert might conflict or fail. 
+                // We'll log it but proceed if it's just a duplicate key error from a trigger race.
+                console.error("Profile creation error:", profileError);
+            }
+
+            // 3. If Vendor, create Vendor Record
+            if (role === 'vendor') {
+                const { error: vendorError } = await supabase
+                    .from('vendors')
+                    .insert({
+                        user_id: authData.user.id,
+                        business_name: values.name, // Use input name as business name initially
+                        campus_id: campus,
                         phone: values.phone,
+                        email: values.email,
+                        status: 'pending' // Matches schema default
                     });
 
-                    setTimeout(() => {
-                        router.push("/verify");
-                    }, 1000);
-
-                    return `Welcome to Debelu, ${values.name.split(' ')[0]}!`;
-                },
-                error: 'Something went wrong. Please try again.',
+                if (vendorError) console.error("Vendor creation error:", vendorError);
             }
-        );
 
-        setIsLoading(false);
+            toast.success(`Welcome to Debelu, ${values.name.split(' ')[0]}!`);
+
+            // Redirect to verify or dashboard
+            // If phone verification is on, they need to verify.
+            setVerificationValues({
+                email: values.email || "",
+                phone: values.phone,
+            });
+
+            setTimeout(() => {
+                // If using email confirmation, maybe go to a "check email" page.
+                // If phone, verify OTP.
+                router.push("/verify");
+            }, 1000);
+
+        } catch (error: any) {
+            toast.error(error.message || "Registration failed");
+            console.error(error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (

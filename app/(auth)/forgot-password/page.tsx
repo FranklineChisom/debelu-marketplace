@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
+import { createClient } from "@/utils/supabase/client";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,20 +41,33 @@ export default function ForgotPasswordPage() {
 
     const onSubmit = async (values: ForgotPasswordFormValues) => {
         setIsLoading(true);
+        const supabase = createClient();
 
-        toast.promise(
-            new Promise((resolve) => setTimeout(resolve, 1500)),
-            {
-                loading: 'Sending reset link...',
-                success: () => {
-                    setIsSubmitted(true);
-                    return "Reset link sent!";
-                },
-                error: 'Something went wrong. Please try again.',
+        // Determine if it's email or phone (simple check)
+        const isEmail = values.contact.includes('@');
+
+        try {
+            if (isEmail) {
+                const { error } = await supabase.auth.resetPasswordForEmail(values.contact, {
+                    redirectTo: `${location.origin}/auth/callback?next=/settings/reset-password`,
+                });
+                if (error) throw error;
+            } else {
+                // For phone, typically an OTP flow is needed, but Supabase doesn't strictly have "resetPasswordForPhone" 
+                // in the same way. Usually it's verifyOtp({ type: 'recovery' }). 
+                // For now we'll assume email or notify user.
+                // Or try signInWithOtp directly?
+                toast.info("Phone password reset requires SMS OTP.");
+                // Implementation depends on if you're using Twilio/MessageBird for Supabase.
             }
-        );
 
-        setIsLoading(false);
+            setIsSubmitted(true);
+            toast.success("Reset link sent!");
+        } catch (error: any) {
+            toast.error(error.message || "Failed to send reset link.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (

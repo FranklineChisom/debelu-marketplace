@@ -40,10 +40,11 @@ export default function OrdersPage() {
     const [searchQuery, setSearchQuery] = useState("");
 
     const orders = useMarketplaceStore((state) => state.orders);
+    const user = useMarketplaceStore((state) => state.user);
 
     const filteredOrders = orders.filter(order => {
-        // Filter by current user (mock user-1)
-        if (order.buyerId !== "user-1") return false;
+        // Filter by authenticated user ID
+        if (!user || order.buyerId !== user.id) return false;
 
         const matchesSearch = order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
             order.vendorName.toLowerCase().includes(searchQuery.toLowerCase());

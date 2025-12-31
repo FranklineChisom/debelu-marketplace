@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 
 import {
     ArrowLeft,
@@ -20,7 +20,9 @@ import {
     Store,
     ShieldCheck,
     Truck,
-    Clock
+    Clock,
+    Loader2,
+    AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +32,8 @@ import { Separator } from "@/components/ui/separator";
 import { cn, formatNaira } from "@/lib/utils";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 import { useCartStore } from "@/stores";
+import { useMarketplaceStore } from "@/stores/useMarketplaceStore";
+import { Product } from "@/types/product";
 
 // Mock product data with variants
 const mockProduct = {
@@ -142,36 +146,88 @@ const mockReviews = [
 
 export default function ProductDetailPage() {
     const router = useRouter();
+    const params = useParams();
+    const productId = params.id as string;
+
+    // Store state
+    const storeProducts = useMarketplaceStore((state) => state.products);
+    const fetchInitialData = useMarketplaceStore((state) => state.fetchInitialData);
+    const addItem = useCartStore((state) => state.addItem);
+
+    // Local state
+    const [isLoading, setIsLoading] = useState(true);
     const [selectedImage, setSelectedImage] = useState(0);
     const [quantity, setQuantity] = useState(1);
     const [isWishlisted, setIsWishlisted] = useState(false);
-    const [selectedColor, setSelectedColor] = useState(mockProduct.variants.colors[0].id);
-    const [selectedRam, setSelectedRam] = useState(mockProduct.variants.ram[0].id);
-    const addItem = useCartStore((state) => state.addItem);
-    const isInCart = useCartStore((state) => state.isInCart(mockProduct.id));
 
-    const selectedRamOption = mockProduct.variants.ram.find(r => r.id === selectedRam);
-    const finalPrice = mockProduct.price + (selectedRamOption?.priceAdd || 0);
+    // Fetch products if not already loaded
+    useEffect(() => {
+        async function loadData() {
+            if (storeProducts.length === 0) {
+                try {
+                    await fetchInitialData();
+                } catch (error) {
+                    console.error("Failed to fetch products:", error);
+                }
+            }
+            setIsLoading(false);
+        }
+        loadData();
+    }, [fetchInitialData, storeProducts.length]);
 
+    // Find product by ID from store
+    const product = storeProducts.find(p => p.id === productId);
 
-    const discountPercent = mockProduct.compareAtPrice
-        ? Math.round((1 - mockProduct.price / mockProduct.compareAtPrice) * 100)
+    // Show loading state
+    if (isLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center min-h-screen">
+                <div className="text-center space-y-4">
+                    <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" />
+                    <p className="text-muted-foreground">Loading product...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Show not found state
+    if (!product) {
+        return (
+            <div className="flex-1 flex items-center justify-center min-h-screen">
+                <div className="text-center space-y-4 max-w-md mx-auto p-8">
+                    <AlertCircle className="w-16 h-16 text-muted-foreground mx-auto" />
+                    <h1 className="text-2xl font-bold">Product Not Found</h1>
+                    <p className="text-muted-foreground">The product you're looking for doesn't exist or has been removed.</p>
+                    <Button onClick={() => router.push('/explore')}>
+                        Browse Products
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
+    // Computed values from product
+    const isInCart = useCartStore.getState().isInCart(product.id);
+    const discountPercent = product.compareAtPrice
+        ? Math.round((1 - product.price / product.compareAtPrice) * 100)
         : 0;
+    const productImage = product.images?.[0]?.url || "https://images.unsplash.com/photo-1593642702749-b7d2a804fbcf?q=80&w=800&auto=format&fit=crop";
+    const productImages = product.images?.map(img => img.url) || [productImage];
 
     const handleAddToCart = () => {
         addItem(
             {
-                id: mockProduct.id,
-                name: mockProduct.name,
-                price: mockProduct.price,
-                compareAtPrice: mockProduct.compareAtPrice,
-                image: mockProduct.images[0],
-                vendorName: mockProduct.vendorName,
-                rating: mockProduct.rating,
-                reviewCount: mockProduct.reviewCount,
-                stock: mockProduct.stock,
-                campusId: mockProduct.campusId,
-                vendorId: mockProduct.vendorId,
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                compareAtPrice: product.compareAtPrice,
+                image: productImage,
+                vendorName: product.vendorId, // Would need vendor lookup for name
+                rating: product.rating,
+                reviewCount: product.reviewCount,
+                stock: product.stock,
+                campusId: product.campusId,
+                vendorId: product.vendorId,
             },
             quantity
         );
@@ -281,17 +337,17 @@ export default function ProductDetailPage() {
                             <div className="flex flex-col gap-1">
                                 <div className="flex items-baseline gap-3">
                                     <span className="text-3xl font-bold text-primary">
-                                        {formatNaira(mockProduct.price)}
+                                        {formatNaira(product.price)}
                                     </span>
-                                    {mockProduct.compareAtPrice && (
+                                    {product.compareAtPrice && (
                                         <span className="text-lg text-muted-foreground line-through decoration-2 decoration-destructive/30">
-                                            {formatNaira(mockProduct.compareAtPrice)}
+                                            {formatNaira(product.compareAtPrice)}
                                         </span>
                                     )}
                                 </div>
-                                {mockProduct.stock <= 5 && (
+                                {product.stock <= 5 && (
                                     <p className="text-sm text-red-500 font-medium animate-pulse">
-                                        Only {mockProduct.stock} units left in stock!
+                                        Only {product.stock} units left in stock!
                                     </p>
                                 )}
                             </div>
@@ -299,72 +355,9 @@ export default function ProductDetailPage() {
 
                         <Separator />
 
-                        {/* Variant Selection */}
-                        <motion.div variants={fadeInUp} className="space-y-6">
-                            {/* Color Selection */}
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Color</h3>
-                                    <span className="text-sm font-medium">{mockProduct.variants.colors.find(c => c.id === selectedColor)?.name}</span>
-                                </div>
-                                <div className="flex gap-3">
-                                    {mockProduct.variants.colors.map((color) => (
-                                        <button
-                                            key={color.id}
-                                            onClick={() => setSelectedColor(color.id)}
-                                            className={cn(
-                                                "w-12 h-12 rounded-full border-2 transition-all duration-200 relative",
-                                                selectedColor === color.id
-                                                    ? "border-primary ring-2 ring-primary/30 scale-110"
-                                                    : "border-border/50 hover:border-primary/50 hover:scale-105"
-                                            )}
-                                            style={{ backgroundColor: color.hex }}
-                                            title={color.name}
-                                        >
-                                            {selectedColor === color.id && (
-                                                <CheckCircle className="absolute inset-0 m-auto w-5 h-5 text-white drop-shadow-lg" />
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* RAM Selection */}
-                            <div className="space-y-3">
-                                <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Configuration</h3>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {mockProduct.variants.ram.map((ram) => (
-                                        <button
-                                            key={ram.id}
-                                            onClick={() => setSelectedRam(ram.id)}
-                                            className={cn(
-                                                "p-4 rounded-xl border-2 transition-all duration-200 text-left",
-                                                selectedRam === ram.id
-                                                    ? "border-primary bg-primary/5 shadow-lg shadow-primary/10"
-                                                    : "border-border/50 hover:border-primary/30 bg-secondary/20"
-                                            )}
-                                        >
-                                            <p className="font-bold text-sm">{ram.name}</p>
-                                            {ram.priceAdd > 0 ? (
-                                                <p className="text-xs text-primary font-medium mt-1">+{formatNaira(ram.priceAdd)}</p>
-                                            ) : (
-                                                <p className="text-xs text-muted-foreground mt-1">Base price</p>
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </motion.div>
-
-                        {/* Key Specs Grid */}
-
-                        <motion.div variants={fadeInUp} className="grid grid-cols-2 gap-4">
-                            {mockProduct.specs.map((spec, i) => (
-                                <div key={i} className="p-3 rounded-xl bg-secondary/30 border border-border/50">
-                                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">{spec.label}</p>
-                                    <p className="font-semibold text-sm line-clamp-1" title={spec.value}>{spec.value}</p>
-                                </div>
-                            ))}
+                        {/* Product Category */}
+                        <motion.div variants={fadeInUp} className="flex gap-2">
+                            <Badge variant="secondary" className="px-3 py-1">{product.category}</Badge>
                         </motion.div>
 
                         {/* Vendor Card */}
@@ -547,10 +540,10 @@ export default function ProductDetailPage() {
                         size="lg"
                         className="flex-1 rounded-xl text-base font-bold shadow-lg shadow-primary/20"
                         onClick={handleAddToCart}
-                        disabled={isInCart || mockProduct.stock === 0}
+                        disabled={isInCart || product.stock === 0}
                     >
                         <ShoppingCart className="w-5 h-5 mr-2" />
-                        {isInCart ? "Already in Cart" : mockProduct.stock === 0 ? "Out of Stock" : `Add to Cart - ${formatNaira(finalPrice * quantity)}`}
+                        {isInCart ? "Already in Cart" : product.stock === 0 ? "Out of Stock" : `Add to Cart - ${formatNaira(product.price * quantity)}`}
                     </Button>
                 </div>
             </div>

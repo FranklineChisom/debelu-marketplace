@@ -48,6 +48,14 @@ const addressTypeIcons: Record<string, React.ComponentType<any>> = {
     Other: Building,
 };
 
+// Define checkout steps
+const steps: { id: Step; label: string; icon: React.ComponentType<any> }[] = [
+    { id: "address", label: "Address", icon: MapPin },
+    { id: "delivery", label: "Delivery", icon: Truck },
+    { id: "payment", label: "Payment", icon: CreditCard },
+    { id: "confirm", label: "Confirm", icon: Check },
+];
+
 // Removed initialAddresses, using store now
 
 const deliverySlots = [
@@ -134,83 +142,163 @@ export default function CheckoutPage() {
 
 
 
-    const handlePlaceOrder = () => {
+    const handlePlaceOrder = async () => {
         setIsProcessing(true);
 
-        // Create new order object
         if (!user) {
             toast.error("Please log in to place an order");
+            setIsProcessing(false);
             return;
         }
 
-        // Create new order object
-        const newOrder: Order = {
-            id: `order-${Date.now()}`,
-            orderNumber: generateOrderId(),
-            buyerId: user.id,
-            buyerName: `${user.profile.firstName} ${user.profile.lastName}`,
-            buyerPhone: user.profile.phone,
-            vendorId: "vendor-1", // Mock Vendor (assuming single vendor for now or derived from cart)
-            vendorName: "Chisom Gadgets", // Mock Vendor Name
-            campusId: user.profile.campusId,
-            items: items.map(item => ({
-                id: `item-${Date.now()}-${Math.random()}`,
-                productId: item.product.id,
-                productName: item.product.name,
-                price: item.product.price,
-                quantity: item.quantity,
-                image: item.product.image,
-                product: item.product // Store the full product info for reference
-            })),
-            subtotal: subtotal,
-            deliveryFee: deliveryFee,
-            discount: discount,
-            total: total,
-            deliveryAddress: selectedAddressData ? {
-                id: selectedAddressData.id,
-                label: selectedAddressData.label,
-                fullAddress: selectedAddressData.fullAddress,
-                isDefault: selectedAddressData.isDefault
-            } : {
-                id: "default-addr",
-                label: "Default Address",
-                fullAddress: "No address selected",
-                isDefault: true
-            },
-            deliverySlot: selectedSlotData ? {
-                id: selectedSlotData.id,
-                label: selectedSlotData.label,
-                date: new Date().toISOString(), // Placeholder
-                startTime: "09:00", // Placeholder
-                endTime: "17:00", // Placeholder
-                fee: selectedSlotData.fee
-            } : {
-                id: "default-slot",
-                label: "Standard Delivery",
-                date: new Date().toISOString(),
-                startTime: "09:00",
-                endTime: "17:00",
-                fee: 0
-            },
-            paymentMethod: selectedPayment as any,
-            paymentStatus: "paid", // Assuming successful payment
-            status: "pending",
-            statusHistory: [],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
+        try {
+            const orderId = crypto.randomUUID();
+            const orderNum = generateOrderId();
 
-        // Dispatch to store
-        placeOrder(newOrder);
+            // For Paystack payment, save order to DB first, then redirect
+            if (selectedPayment === 'paystack') {
+                // Derive vendor from first cart item (for multi-vendor, we'd need separate orders)
+                const firstItem = items[0];
+                const derivedVendorId = firstItem?.product.vendorId || 'unknown-vendor';
+                const derivedVendorName = firstItem?.product.vendorName || 'Unknown Vendor';
 
-        // Simulate API delay
-        setTimeout(() => {
-            setIsProcessing(false);
-            setOrderNumber(newOrder.orderNumber); // Set the order number for display
-            clearCart(); // Clear the cart after placing order
+                // Build the order object
+                const pendingOrder: Order = {
+                    id: orderId,
+                    orderNumber: orderNum,
+                    buyerId: user.id,
+                    buyerName: `${user.profile.firstName} ${user.profile.lastName}`,
+                    buyerPhone: user.profile.phone,
+                    vendorId: derivedVendorId,
+                    vendorName: derivedVendorName,
+                    campusId: user.profile.campusId,
+                    items: items.map(item => ({
+                        id: crypto.randomUUID(),
+                        productId: item.product.id,
+                        productName: item.product.name,
+                        price: item.product.price,
+                        quantity: item.quantity,
+                        image: item.product.image,
+                        product: item.product
+                    })),
+                    subtotal,
+                    deliveryFee,
+                    discount,
+                    total,
+                    deliveryAddress: selectedAddressData ? {
+                        id: selectedAddressData.id,
+                        label: selectedAddressData.label,
+                        fullAddress: selectedAddressData.fullAddress,
+                        isDefault: selectedAddressData.isDefault
+                    } : { id: "default-addr", label: "Default", fullAddress: "N/A", isDefault: true },
+                    deliverySlot: selectedSlotData ? {
+                        id: selectedSlotData.id,
+                        label: selectedSlotData.label,
+                        date: new Date().toISOString(),
+                        startTime: "09:00",
+                        endTime: "17:00",
+                        fee: selectedSlotData.fee
+                    } : { id: "default-slot", label: "Standard", date: new Date().toISOString(), startTime: "09:00", endTime: "17:00", fee: 0 },
+                    paymentMethod: selectedPayment as any,
+                    paymentStatus: "pending", // Will be updated after successful payment
+                    status: "pending",
+                    statusHistory: [],
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                // Save order to database FIRST (with pending payment status)
+                await placeOrder(pendingOrder);
+
+                // Initialize Paystack transaction
+                const paystackResponse = await fetch('/api/paystack/initialize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: user.profile.email || `${user.id}@debelu.com`,
+                        amount: total,
+                        reference: orderId,
+                        callbackUrl: `${window.location.origin}/checkout/callback`,
+                        metadata: {
+                            orderId,
+                            orderNumber: orderNum,
+                            buyerId: user.id,
+                        },
+                    }),
+                });
+
+                const paystackData = await paystackResponse.json();
+
+                if (!paystackResponse.ok) {
+                    throw new Error(paystackData.error || 'Failed to initialize payment');
+                }
+
+                // Store ONLY orderId in localStorage for callback to retrieve
+                localStorage.setItem('pendingOrderId', orderId);
+
+                // Clear cart now (order is saved in DB)
+                clearCart();
+
+                // Redirect to Paystack checkout
+                window.location.href = paystackData.authorizationUrl;
+                return;
+            }
+
+            // For COD (Cash on Delivery) or other methods, proceed directly
+            const newOrder: Order = {
+                id: orderId,
+                orderNumber: orderNum,
+                buyerId: user.id,
+                buyerName: `${user.profile.firstName} ${user.profile.lastName}`,
+                buyerPhone: user.profile.phone,
+                vendorId: "vendor-1",
+                vendorName: "Chisom Gadgets",
+                campusId: user.profile.campusId,
+                items: items.map(item => ({
+                    id: crypto.randomUUID(),
+                    productId: item.product.id,
+                    productName: item.product.name,
+                    price: item.product.price,
+                    quantity: item.quantity,
+                    image: item.product.image,
+                    product: item.product
+                })),
+                subtotal,
+                deliveryFee,
+                discount,
+                total,
+                deliveryAddress: selectedAddressData ? {
+                    id: selectedAddressData.id,
+                    label: selectedAddressData.label,
+                    fullAddress: selectedAddressData.fullAddress,
+                    isDefault: selectedAddressData.isDefault
+                } : { id: "default-addr", label: "Default Address", fullAddress: "No address selected", isDefault: true },
+                deliverySlot: selectedSlotData ? {
+                    id: selectedSlotData.id,
+                    label: selectedSlotData.label,
+                    date: new Date().toISOString(),
+                    startTime: "09:00",
+                    endTime: "17:00",
+                    fee: selectedSlotData.fee
+                } : { id: "default-slot", label: "Standard Delivery", date: new Date().toISOString(), startTime: "09:00", endTime: "17:00", fee: 0 },
+                paymentMethod: selectedPayment as any,
+                paymentStatus: selectedPayment === 'cod' ? 'pending' : 'paid',
+                status: "pending",
+                statusHistory: [],
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            await placeOrder(newOrder);
+            setOrderNumber(newOrder.orderNumber);
+            clearCart();
             setCurrentStep("confirm");
-            toast.success("Order placed successfully!");
-        }, 2000);
+        } catch (error) {
+            console.error(error);
+            toast.error(error instanceof Error ? error.message : "Failed to place order");
+        } finally {
+            setIsProcessing(false);
+        }
     };
 
     // Address management functions

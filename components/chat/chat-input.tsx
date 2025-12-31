@@ -9,20 +9,23 @@ import { useChatStore } from "@/stores";
 import { toast } from "sonner";
 
 interface ChatInputProps {
-    onSend?: (message: string) => void;
+    input: string;
+    handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+    handleSubmit: (e: React.FormEvent) => void;
+    isLoading: boolean;
     placeholder?: string;
     disabled?: boolean;
 }
 
 export function ChatInput({
-    onSend,
+    input,
+    handleInputChange,
+    handleSubmit,
+    isLoading,
     placeholder = "What are you looking for?",
     disabled = false,
 }: ChatInputProps) {
-    const [message, setMessage] = useState("");
     const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const addUserMessage = useChatStore((state) => state.addUserMessage);
-    const setTyping = useChatStore((state) => state.setTyping);
     const selectedProduct = useChatStore((state) => state.selectedProduct);
     const setSelectedProduct = useChatStore((state) => state.setSelectedProduct);
 
@@ -35,41 +38,12 @@ export function ChatInput({
                 120
             )}px`;
         }
-    }, [message]);
-
-    const handleSubmit = () => {
-        const trimmed = message.trim();
-        if (!trimmed || disabled) return;
-
-        // Contextual message handling
-        if (selectedProduct) {
-            // In a real app, we'd send the product ID context here
-            // For now, we just prepend it visually or logically if needed, 
-            // but user wants "anything I type will be in relation", so we just send the message
-            // and let the "AI" (mock) handle it.
-        }
-
-        // Add user message
-        addUserMessage(trimmed);
-        setMessage("");
-
-        // Simulate AI response (in real app, this would call API)
-        setTyping(true, "Searching for products...");
-
-        // Simulate delay then stop typing
-        setTimeout(() => {
-            setTyping(false);
-            // Mock AI response would be added here
-        }, 2000);
-
-        // Callback
-        onSend?.(trimmed);
-    };
+    }, [input]);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
-            handleSubmit();
+            handleSubmit(e as any);
         }
     };
 
@@ -112,17 +86,14 @@ export function ChatInput({
                             selectedProduct && "ring-1 ring-primary/30 bg-primary/5"
                         )}>
 
-
-
-
                             {/* Textarea */}
                             <textarea
                                 ref={textareaRef}
-                                value={message}
-                                onChange={(e) => setMessage(e.target.value)}
+                                value={input}
+                                onChange={handleInputChange}
                                 onKeyDown={handleKeyDown}
                                 placeholder={selectedProduct ? `Ask about ${selectedProduct.name}...` : placeholder}
-                                disabled={disabled}
+                                disabled={disabled || isLoading}
                                 rows={1}
                                 className={cn(
                                     "flex-1 bg-transparent resize-none py-3.5 px-5 text-base leading-relaxed font-medium",
@@ -139,7 +110,7 @@ export function ChatInput({
                                 variant="ghost"
                                 size="icon"
                                 className="flex-shrink-0 h-12 w-12 rounded-full text-muted-foreground hover:text-foreground hover:bg-transparent"
-                                disabled={disabled}
+                                disabled={disabled || isLoading}
                                 onClick={() => toast.info("Voice chat coming soon!")}
                             >
                                 <Mic className="w-5 h-5" />
@@ -150,8 +121,8 @@ export function ChatInput({
                     {/* Send Button */}
                     <motion.div
                         animate={{
-                            scale: message.trim() ? 1 : 0.9,
-                            opacity: message.trim() ? 1 : 0.5,
+                            scale: input.trim() ? 1 : 0.9,
+                            opacity: input.trim() ? 1 : 0.5,
                         }}
                         transition={{ duration: 0.15 }}
                     >
@@ -163,8 +134,8 @@ export function ChatInput({
                                 selectedProduct ? "bg-primary hover:bg-primary/90" : "bg-primary hover:bg-primary/90",
                                 "text-primary-foreground"
                             )}
-                            onClick={handleSubmit}
-                            disabled={!message.trim() || disabled}
+                            onClick={(e) => handleSubmit(e as any)}
+                            disabled={!input.trim() || disabled || isLoading}
                         >
                             <Send className="w-5 h-5 ml-0.5" />
                         </Button>

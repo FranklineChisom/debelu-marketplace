@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Plus,
@@ -41,7 +41,12 @@ import { CartPanel } from "@/components/chat/panels/cart-panel";
 import { CheckoutPanel } from "@/components/chat/panels/checkout-panel";
 import { OrderPanel } from "@/components/chat/panels/order-panel";
 import { DeliveryMap } from "@/components/chat/delivery-map";
-import { useChatStore } from "@/stores";
+import { useChatStore, useCartStore } from "@/stores";
+import { useMarketplaceStore } from "@/stores/useMarketplaceStore";
+
+import { useChat } from '@ai-sdk/react';
+
+// ... other imports
 
 export default function ChatPage() {
     const isSidebarOpen = useChatStore((state) => state.isSidebarOpen);
@@ -51,9 +56,84 @@ export default function ChatPage() {
     const history = useChatStore((state) => state.history);
 
     const [searchQuery, setSearchQuery] = useState("");
+    const [chatInput, setChatInput] = useState(""); // Local input state for v3 API
+
+    // Initialize Vercel AI SDK useChat hook (v3 API)
+    // Uses sendMessage instead of handleSubmit, status instead of isLoading
+    const { messages, sendMessage, status, setMessages } = useChat();
+
+    // Derive isLoading from status for component compatibility
+    const isLoading = status === 'streaming' || status === 'submitted';
+
+    // Handle input change for compatibility
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setChatInput(e.target.value);
+    };
+
+    // Handle submit using sendMessage
+    const handleSubmit = async (e?: { preventDefault?: () => void }) => {
+        e?.preventDefault?.();
+        if (!chatInput.trim()) return;
+        await sendMessage({ content: chatInput });
+        setChatInput("");
+    };
+
+    const processedToolIds = useRef<Set<string>>(new Set());
+
+    // Handle Client-Side Tool Effects
+    useEffect(() => {
+        if (!messages.length) return;
+
+        const lastMessage = messages[messages.length - 1] as any;
+        const toolInvocations = lastMessage.toolInvocations || lastMessage.parts?.filter((p: any) => p.type === 'tool-invocation') || [];
+        if (lastMessage.role !== 'assistant' || !toolInvocations.length) return;
+
+        toolInvocations.forEach((toolInvocation: any) => {
+            if (processedToolIds.current.has(toolInvocation.toolCallId)) return;
+
+            // Handle "addToCart"
+            if (toolInvocation.toolName === 'addToCart' && 'result' in toolInvocation) {
+                processedToolIds.current.add(toolInvocation.toolCallId);
+                const { productId, quantity } = (toolInvocation.result as any);
+
+                // Get product from store and add to cart
+                const storeProducts = useMarketplaceStore.getState().products;
+                const product = storeProducts.find(p => p.id === productId);
+
+                if (product) {
+                    // Add to cart using cart store
+                    useCartStore.getState().addItem({
+                        id: product.id,
+                        name: product.name,
+                        price: product.price,
+                        compareAtPrice: product.compareAtPrice,
+                        image: product.images?.[0]?.url || "",
+                        vendorName: product.vendorId,
+                        rating: product.rating || 0,
+                        reviewCount: product.reviewCount || 0,
+                        stock: product.stock,
+                        campusId: product.campusId,
+                        vendorId: product.vendorId,
+                    }, quantity || 1);
+
+                    console.log("Added to cart:", product.name, quantity);
+                } else {
+                    console.warn("Product not found for addToCart:", productId);
+                }
+
+                // Open cart panel to show the added item
+                useChatStore.getState().openPanel('cart');
+            }
+        });
+    }, [messages]);
 
     const handleNewChat = () => {
-        startNewSession();
+        // Reload page or reset useChat (useChat doesn't have a direct reset, 
+        // usually window.location.reload() or manually setMessages([]))
+        // For now, we'll just reload to clear state or we can use setMessages([]) if we extract it.
+        // Actually, startNewSession is for the store. 
+        // We'll just reload for a fresh start with the AI for this demo.
+        window.location.reload();
     };
 
     // Group history by date
@@ -232,16 +312,42 @@ export default function ChatPage() {
                                 <h1 className="text-sm font-semibold">Debelu Assistant</h1>
                             </div>
                         </div>
-
-
                     </div>
 
                     {/* Messages */}
-                    <ChatContainer className="flex-1" />
+                    <ChatContainer
+                        className="flex-1"
+                        messages={messages.map(m => {
+                            // Check for searchProducts tool result (cast to any for v3 API compatibility)
+                            const msgAny = m as any;
+                            const toolInvocations = msgAny.toolInvocations || msgAny.parts?.filter((p: any) => p.type === 'tool-invocation') || [];
+                            const searchTool = toolInvocations.find(
+                                (t: any) => t.toolName === 'searchProducts' && ('result' in t || t.result)
+                            );
+
+                            // Check for addToCart tool (just to set type if needed, though side-effect handles logic)
+                            // const cartTool = m.toolInvocations?.find(t => t.toolName === 'addToCart');
+
+                            // Transform for UI
+                            const transformedMessage = {
+                                ...m,
+                                type: searchTool ? 'products' : 'text',
+                                products: searchTool && 'result' in searchTool ? (searchTool.result as any).products : undefined,
+                            };
+
+                            return transformedMessage;
+                        })}
+                        isLoading={isLoading}
+                    />
 
                     {/* Input Area */}
                     <div className="p-4 lg:p-6 pt-2 z-10 bg-gradient-to-t from-background via-background to-transparent">
-                        <ChatInput />
+                        <ChatInput
+                            input={chatInput}
+                            handleInputChange={handleInputChange}
+                            handleSubmit={handleSubmit}
+                            isLoading={isLoading}
+                        />
                     </div>
                 </div>
 

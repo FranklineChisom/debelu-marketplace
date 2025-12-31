@@ -11,11 +11,11 @@ import { WelcomeState } from "./welcome-state";
 
 interface ChatContainerProps {
     className?: string;
+    messages: any[]; // Using any[] temporarily for compatibility with both Store and AI SDK messages
+    isLoading?: boolean;
 }
 
-export function ChatContainer({ className }: ChatContainerProps) {
-    const messages = useChatStore((state) => state.messages);
-    const isTyping = useChatStore((state) => state.isTyping);
+export function ChatContainer({ className, messages, isLoading }: ChatContainerProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     // Auto-scroll to bottom on new messages
@@ -26,7 +26,7 @@ export function ChatContainer({ className }: ChatContainerProps) {
                 behavior: "smooth",
             });
         }
-    }, [messages, isTyping.isTyping]);
+    }, [messages, isLoading]);
 
     const hasMessages = messages.length > 0;
 
@@ -76,14 +76,14 @@ export function ChatContainer({ className }: ChatContainerProps) {
 
                 {/* Typing Indicator */}
                 <AnimatePresence>
-                    {isTyping.isTyping && (
+                    {isLoading && (
                         <motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
                             className="mt-4"
                         >
-                            <TypingIndicator message={isTyping.message} />
+                            <TypingIndicator message="Debelu is thinking..." />
                         </motion.div>
                     )}
                 </AnimatePresence>
