@@ -1,187 +1,200 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
-import { Star, Plus, MessageCircle, ArrowRight } from "lucide-react";
+import { Star, ShoppingCart, Eye, TrendingDown } from "lucide-react";
 import { motion } from "framer-motion";
-import { cn, formatNaira } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { cn, formatNaira } from "@/lib/utils";
+import { useChatStore, useCartStore } from "@/stores";
 import type { ProductSummary } from "@/types";
-import { useCartStore, useChatStore } from "@/stores";
 
 interface ProductCardChatProps {
-    product: ProductSummary;
+    product: ProductSummary | any; // Allow any for AI SDK response compatibility
     expanded?: boolean;
+    className?: string;
 }
 
-export function ProductCardChat({ product, expanded = false }: ProductCardChatProps) {
-    const addItem = useCartStore((state) => state.addItem);
-    const isInCart = useCartStore((state) => state.isInCart(product.id));
+export function ProductCardChat({ product, expanded = false, className }: ProductCardChatProps) {
     const setSelectedProduct = useChatStore((state) => state.setSelectedProduct);
-    const selectedProduct = useChatStore((state) => state.selectedProduct);
-    const isSelected = selectedProduct?.id === product.id;
+    const addItem = useCartStore((state) => state.addItem);
+
+    // Safe image handling - handle both 'image' (single) and 'images' (array)
+    const imageUrl = product.image
+        || (product.images && product.images.length > 0
+            ? (typeof product.images[0] === 'string' ? product.images[0] : product.images[0]?.url)
+            : '/placeholder-image.png');
+
+    // Calculate discount percentage if compare price exists
+    const hasDiscount = product.compareAtPrice && product.compareAtPrice > product.price;
+    const discountPercent = hasDiscount
+        ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
+        : 0;
+
+    const handleViewDetails = () => {
+        // Transform to ProductSummary format if coming from API
+        const productSummary: ProductSummary = {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            compareAtPrice: product.compareAtPrice,
+            vendorId: product.vendorId || product.vendor_id,
+            vendorName: product.vendorName || product.vendor_name || "Campus Vendor",
+            rating: product.rating || 0,
+            reviewCount: product.reviewCount || product.review_count || 0,
+            image: imageUrl,
+            stock: product.stock || 10,
+            category: product.category,
+            campusId: product.campusId || product.campus_id,
+            attributes: product.attributes || {},
+        };
+        setSelectedProduct(productSummary);
+    };
 
     const handleAddToCart = (e: React.MouseEvent) => {
         e.stopPropagation();
-        addItem(product);
+        addItem({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            compareAtPrice: product.compareAtPrice,
+            image: imageUrl,
+            vendorName: product.vendorName || product.vendor_name || "Campus Vendor",
+            rating: product.rating || 0,
+            reviewCount: product.reviewCount || 0,
+            stock: product.stock || 10,
+            campusId: product.campusId || product.campus_id,
+            vendorId: product.vendorId || product.vendor_id,
+        }, 1);
     };
 
-    const handleCardClick = () => {
-        setSelectedProduct(product);
-    };
-
-    const hasDiscount = product.compareAtPrice && product.compareAtPrice > product.price;
-    const discountPercent = hasDiscount
-        ? Math.round((1 - product.price / product.compareAtPrice!) * 100)
-        : 0;
-
+    // Expanded card for product-detail message type
     if (expanded) {
         return (
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className={cn(
-                    "bg-background border rounded-2xl overflow-hidden max-w-sm cursor-pointer transition-all duration-300",
-                    isSelected
-                        ? "ring-2 ring-primary shadow-xl scale-[1.02] border-primary"
-                        : "hover:border-primary/50"
-                )}
-                onClick={handleCardClick}
-            >
-                {/* Image */}
-                <div className="relative aspect-square bg-muted">
-                    {product.image ? (
+            <Card className="overflow-hidden cursor-pointer group hover:shadow-lg transition-all duration-300" onClick={handleViewDetails}>
+                <div className="flex gap-4 p-4">
+                    <div className="relative w-32 h-32 flex-shrink-0 rounded-xl overflow-hidden bg-muted">
                         <Image
-                            src={product.image}
+                            src={imageUrl}
                             alt={product.name}
                             fill
-                            className="object-cover"
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            sizes="128px"
                         />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                            No image
-                        </div>
-                    )}
-                    {hasDiscount && (
-                        <Badge variant="destructive" className="absolute top-3 left-3">
-                            -{discountPercent}%
-                        </Badge>
-                    )}
-                </div>
-
-                {/* Content */}
-                <div className="p-4 space-y-3">
-                    <div>
-                        <h3 className="font-semibold text-base line-clamp-2">{product.name}</h3>
-                        <Link href={`/vendor/${product.vendorId || '1'}`} className="text-sm text-muted-foreground hover:text-primary hover:underline transition-colors block w-fit">
-                            {product.vendorName}
-                        </Link>
-                    </div>
-
-                    {/* Rating */}
-                    <div className="flex items-center gap-1.5">
-                        <div className="flex items-center">
-                            <Star className="w-4 h-4 fill-warning text-warning" />
-                            <span className="text-sm font-medium ml-1">{product.rating.toFixed(1)}</span>
-                        </div>
-                        <span className="text-sm text-muted-foreground">
-                            ({product.reviewCount} reviews)
-                        </span>
-                    </div>
-
-                    {/* Price */}
-                    <div className="flex items-baseline gap-2">
-                        <span className="price price-lg">{formatNaira(product.price)}</span>
                         {hasDiscount && (
-                            <span className="text-sm text-muted-foreground line-through">
-                                {formatNaira(product.compareAtPrice!)}
-                            </span>
+                            <Badge className="absolute top-2 left-2 bg-destructive text-destructive-foreground text-[10px]">
+                                -{discountPercent}%
+                            </Badge>
                         )}
                     </div>
-
-                    {/* Stock */}
-                    {product.stock <= 5 && product.stock > 0 && (
-                        <Badge variant="warning">Only {product.stock} left</Badge>
-                    )}
-
-                    {/* Actions */}
-                    <div className="flex gap-2 pt-2">
-                        <Button
-                            className="flex-1"
-                            onClick={handleAddToCart}
-                            disabled={isInCart || product.stock === 0}
-                        >
-                            {isInCart ? (
-                                "In Cart"
-                            ) : product.stock === 0 ? (
-                                "Out of Stock"
-                            ) : (
-                                <>
-                                    <Plus className="w-4 h-4" />
-                                    Add to Cart
-                                </>
+                    <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm line-clamp-2 group-hover:text-primary transition-colors">
+                            {product.name}
+                        </h4>
+                        {product.vendorName && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                                by {product.vendorName}
+                            </p>
+                        )}
+                        {product.rating > 0 && (
+                            <div className="flex items-center gap-1 mt-2">
+                                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                                <span className="text-xs font-medium">{product.rating.toFixed(1)}</span>
+                                <span className="text-xs text-muted-foreground">
+                                    ({product.reviewCount || 0})
+                                </span>
+                            </div>
+                        )}
+                        <div className="mt-2 flex items-center gap-2">
+                            <span className="font-bold text-primary">{formatNaira(product.price)}</span>
+                            {hasDiscount && (
+                                <span className="text-xs text-muted-foreground line-through">
+                                    {formatNaira(product.compareAtPrice)}
+                                </span>
                             )}
-                        </Button>
-                        <Button variant="outline" size="icon">
-                            <MessageCircle className="w-4 h-4" />
-                        </Button>
+                        </div>
+                        <div className="flex gap-2 mt-3">
+                            <Button size="sm" variant="secondary" className="text-xs h-8" onClick={handleAddToCart}>
+                                <ShoppingCart className="w-3 h-3 mr-1" />
+                                Add
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-xs h-8">
+                                <Eye className="w-3 h-3 mr-1" />
+                                Details
+                            </Button>
+                        </div>
                     </div>
                 </div>
-            </motion.div>
+            </Card>
         );
     }
 
-    // Compact card for carousel
+    // Compact card for products carousel
     return (
         <motion.div
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className={cn(
-                "flex-shrink-0 w-36 bg-background border rounded-xl p-3 cursor-pointer transition-all duration-300",
-                isSelected
-                    ? "ring-2 ring-primary shadow-lg border-primary"
-                    : ""
-            )}
-            onClick={handleCardClick}
+            whileHover={{ y: -2 }}
+            transition={{ duration: 0.2 }}
+            className={cn("h-full", className)}
         >
-            {/* Image */}
-            <div className="relative aspect-square bg-muted rounded-lg mb-2 overflow-hidden">
-                {product.image ? (
+            <Card
+                className="h-full overflow-hidden cursor-pointer group hover:shadow-md transition-all duration-300 border-border/50"
+                onClick={handleViewDetails}
+            >
+                <div className="relative aspect-square w-full bg-muted">
                     <Image
-                        src={product.image}
+                        src={imageUrl}
                         alt={product.name}
                         fill
-                        className="object-cover"
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        sizes="(max-width: 768px) 50vw, 200px"
                     />
-                ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-                        No image
+                    {hasDiscount && (
+                        <Badge className="absolute top-2 left-2 bg-destructive text-destructive-foreground text-[10px] px-1.5">
+                            <TrendingDown className="w-2.5 h-2.5 mr-0.5" />
+                            {discountPercent}%
+                        </Badge>
+                    )}
+                </div>
+                <CardContent className="p-3">
+                    <h4 className="font-medium text-sm line-clamp-1 group-hover:text-primary transition-colors">
+                        {product.name}
+                    </h4>
+                    {product.vendorName && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                            {product.vendorName}
+                        </p>
+                    )}
+                    {product.rating > 0 && (
+                        <div className="flex items-center gap-1 mt-1">
+                            <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                            <span className="text-[10px] font-medium">{product.rating.toFixed(1)}</span>
+                        </div>
+                    )}
+                    <div className="mt-2 flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-sm text-primary">{formatNaira(product.price)}</span>
+                            {hasDiscount && (
+                                <span className="text-[10px] text-muted-foreground line-through">
+                                    {formatNaira(product.compareAtPrice)}
+                                </span>
+                            )}
+                        </div>
                     </div>
-                )}
-                {hasDiscount && (
-                    <Badge variant="destructive" className="absolute top-1 left-1 text-[10px] px-1.5 py-0">
-                        -{discountPercent}%
-                    </Badge>
-                )}
-            </div>
-
-            {/* Content */}
-            <h4 className="font-medium text-xs line-clamp-2 mb-1">{product.name}</h4>
-            <p className="text-[10px] text-muted-foreground mb-1">{product.vendorName}</p>
-
-            {/* Price */}
-            <div className="flex items-baseline gap-1">
-                <span className="font-bold text-sm">{formatNaira(product.price)}</span>
-            </div>
-
-            {/* Rating */}
-            <div className="flex items-center gap-1 mt-1">
-                <Star className="w-3 h-3 fill-warning text-warning" />
-                <span className="text-[10px] text-muted-foreground">
-                    {product.rating.toFixed(1)}
-                </span>
-            </div>
+                    <Button
+                        size="sm"
+                        className="w-full text-xs h-7 mt-2"
+                        variant="secondary"
+                        onClick={handleAddToCart}
+                    >
+                        <ShoppingCart className="w-3 h-3 mr-1" />
+                        Add
+                    </Button>
+                </CardContent>
+            </Card>
         </motion.div>
     );
 }
+
+// Default export for backwards compatibility
+export default ProductCardChat;

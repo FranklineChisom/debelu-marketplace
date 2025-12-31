@@ -6,6 +6,13 @@ import type { ChatMessage, ProductSummary } from "@/types";
 import { ProductCardChat } from "./product-card-chat";
 import { Badge } from "@/components/ui/badge";
 import { useChatStore } from "@/stores";
+import {
+    Carousel,
+    CarouselContent,
+    CarouselItem,
+    CarouselNext,
+    CarouselPrevious,
+} from "@/components/ui/carousel";
 
 
 interface MessageBubbleProps {
@@ -54,12 +61,23 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
                 {/* Products carousel */}
                 {type === "products" && products && products.length > 0 && (
-                    <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 pt-2">
-                        <div className="flex gap-3 pb-2">
-                            {products.map((product) => (
-                                <ProductCardChat key={product.id} product={product} />
-                            ))}
-                        </div>
+                    <div className="w-[85vw] md:w-[600px] lg:w-[700px] pr-8 pl-1">
+                        <Carousel
+                            opts={{
+                                align: "start",
+                            }}
+                            className="w-full"
+                        >
+                            <CarouselContent className="-ml-2">
+                                {products.map((product) => (
+                                    <CarouselItem key={product.id} className="pl-2 basis-[160px] sm:basis-[200px] lg:basis-1/3">
+                                        <ProductCardChat product={product} />
+                                    </CarouselItem>
+                                ))}
+                            </CarouselContent>
+                            <CarouselPrevious className="left-0 -translate-x-1/2 hidden sm:flex" />
+                            <CarouselNext className="right-0 translate-x-1/2 hidden sm:flex" />
+                        </Carousel>
                     </div>
                 )}
 

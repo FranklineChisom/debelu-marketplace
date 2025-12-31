@@ -35,7 +35,7 @@ import {
 
 import { ChatContainer } from "@/components/chat/chat-container";
 import { ChatInput } from "@/components/chat/chat-input";
-import { ProductDetailPanel } from "@/components/chat/product-detail-panel";
+import { ProductIntelligencePanel } from "@/components/chat/product-intelligence-panel";
 import { ProductComparePanel } from "@/components/chat/product-compare-panel";
 import { CartPanel } from "@/components/chat/panels/cart-panel";
 import { CheckoutPanel } from "@/components/chat/panels/checkout-panel";
@@ -56,27 +56,80 @@ export default function ChatPage() {
     const history = useChatStore((state) => state.history);
 
     const [searchQuery, setSearchQuery] = useState("");
-    const [chatInput, setChatInput] = useState(""); // Local input state for v3 API
+    const [chatInput, setChatInput] = useState(""); // Local input state
+    const [showDebug, setShowDebug] = useState(false); // Debug panel toggle (enable for troubleshooting)
+    const [lastError, setLastError] = useState<string | null>(null);
 
-    // Initialize Vercel AI SDK useChat hook (v3 API)
-    // Uses sendMessage instead of handleSubmit, status instead of isLoading
-    const { messages, sendMessage, status, setMessages } = useChat();
+    // Initialize Vercel AI SDK useChat hook with proper configuration
+    const chatHelpers = useChat({
+        api: '/api/chat',
+        maxSteps: 5, // Enable multi-step tool execution (client handles tool loop)
+        onError: (error: Error) => {
+            console.error('[useChat] Error:', error);
+            setLastError(error.message);
+        },
+        onFinish: (message: any) => {
+            console.log('[useChat] Finished:', message);
+        },
+    } as any);
+
+    // Destructure with fallbacks for v5/v6 compatibility
+    const { messages, status, setMessages, error: chatError } = chatHelpers;
+    const append = (chatHelpers as any).append || (chatHelpers as any).sendMessage;
+    const aiIsLoading = (chatHelpers as any).isLoading;
 
     // Derive isLoading from status for component compatibility
-    const isLoading = status === 'streaming' || status === 'submitted';
+    const isLoading = aiIsLoading || status === 'streaming' || status === 'submitted';
 
-    // Handle input change for compatibility
+    // Debug info object - captures all relevant state
+    const debugInfo = {
+        timestamp: new Date().toISOString(),
+        status,
+        isLoading,
+        aiIsLoading,
+        messageCount: messages?.length || 0,
+        lastError: lastError || chatError?.message || null,
+        hasAppend: !!append,
+        messages: messages?.map((m: any) => ({
+            id: m.id,
+            role: m.role,
+            contentLength: m.content?.length || 0,
+            hasToolInvocations: !!(m.toolInvocations?.length),
+            toolInvocations: m.toolInvocations?.map((t: any) => ({
+                toolName: t.toolName,
+                toolCallId: t.toolCallId,
+                hasResult: 'result' in t,
+                resultPreview: 'result' in t ? JSON.stringify(t.result).slice(0, 100) : null,
+            })),
+        })),
+    };
+
+    // Log state changes
+    useEffect(() => {
+        console.log('[Chat Debug]', debugInfo);
+    }, [status, messages?.length, isLoading]);
+
+    // Handle input change - use local state for controlled input
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setChatInput(e.target.value);
     };
 
-    // Handle submit using sendMessage
+    // Handle submit using append
     const handleSubmit = async (e?: { preventDefault?: () => void }) => {
         e?.preventDefault?.();
-        if (!chatInput.trim()) return;
-        await sendMessage({ content: chatInput });
-        setChatInput("");
+        if (!chatInput.trim() || isLoading) return;
+        const message = chatInput;
+        setChatInput(""); // Clear input immediately for better UX
+        setLastError(null); // Clear previous errors
+        try {
+            console.log('[Chat] Sending message:', message);
+            await append({ role: 'user', content: message });
+        } catch (err: any) {
+            console.error('[Chat] Submit error:', err);
+            setLastError(err.message);
+        }
     };
+
 
     const processedToolIds = useRef<Set<string>>(new Set());
 
@@ -314,29 +367,57 @@ export default function ChatPage() {
                         </div>
                     </div>
 
+                    {/* DEBUG PANEL - Copy this info to diagnose issues */}
+                    {showDebug && (
+                        <div className="m-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-xs font-mono">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="font-bold text-yellow-800 dark:text-yellow-200">🐛 Debug Panel</span>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(JSON.stringify(debugInfo, null, 2));
+                                            alert('Debug info copied to clipboard!');
+                                        }}
+                                        className="px-2 py-1 bg-yellow-200 dark:bg-yellow-800 rounded text-yellow-800 dark:text-yellow-200 hover:bg-yellow-300 dark:hover:bg-yellow-700"
+                                    >
+                                        📋 Copy Debug Info
+                                    </button>
+                                    <button
+                                        onClick={() => setShowDebug(false)}
+                                        className="px-2 py-1 bg-yellow-200 dark:bg-yellow-800 rounded text-yellow-800 dark:text-yellow-200 hover:bg-yellow-300 dark:hover:bg-yellow-700"
+                                    >
+                                        ✕ Hide
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="space-y-1 text-yellow-700 dark:text-yellow-300">
+                                <div><strong>Status:</strong> {status || 'undefined'}</div>
+                                <div><strong>isLoading:</strong> {String(isLoading)}</div>
+                                <div><strong>aiIsLoading:</strong> {String(aiIsLoading)}</div>
+                                <div><strong>Messages:</strong> {messages?.length || 0}</div>
+                                <div><strong>hasAppend:</strong> {String(!!append)}</div>
+                                {lastError && (
+                                    <div className="text-red-600 dark:text-red-400"><strong>Error:</strong> {lastError}</div>
+                                )}
+                                {messages?.length > 0 && (
+                                    <div className="mt-2 pt-2 border-t border-yellow-300 dark:border-yellow-700">
+                                        <strong>Last Message:</strong>
+                                        <pre className="mt-1 p-2 bg-yellow-100 dark:bg-yellow-900/50 rounded overflow-auto max-h-32">
+                                            {JSON.stringify({
+                                                ...messages[messages.length - 1],
+                                                content: messages[messages.length - 1]?.content?.slice(0, 200),
+                                            }, null, 2)}
+                                        </pre>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Messages */}
                     <ChatContainer
                         className="flex-1"
-                        messages={messages.map(m => {
-                            // Check for searchProducts tool result (cast to any for v3 API compatibility)
-                            const msgAny = m as any;
-                            const toolInvocations = msgAny.toolInvocations || msgAny.parts?.filter((p: any) => p.type === 'tool-invocation') || [];
-                            const searchTool = toolInvocations.find(
-                                (t: any) => t.toolName === 'searchProducts' && ('result' in t || t.result)
-                            );
-
-                            // Check for addToCart tool (just to set type if needed, though side-effect handles logic)
-                            // const cartTool = m.toolInvocations?.find(t => t.toolName === 'addToCart');
-
-                            // Transform for UI
-                            const transformedMessage = {
-                                ...m,
-                                type: searchTool ? 'products' : 'text',
-                                products: searchTool && 'result' in searchTool ? (searchTool.result as any).products : undefined,
-                            };
-
-                            return transformedMessage;
-                        })}
+                        messages={messages}
                         isLoading={isLoading}
                     />
 
@@ -369,7 +450,7 @@ export default function ChatPage() {
                                     activePanel === 'cart' || activePanel === 'checkout' ? "w-[450px]" :
                                         "w-[400px]"
                             )}>
-                                {activePanel === 'product_detail' && <ProductDetailPanel />}
+                                {activePanel === 'product_detail' && <ProductIntelligencePanel />}
                                 {activePanel === 'compare' && <ProductComparePanel />}
                                 {activePanel === 'cart' && <CartPanel />}
                                 {activePanel === 'checkout' && <CheckoutPanel />}
@@ -390,7 +471,7 @@ export default function ChatPage() {
                             transition={{ type: "spring", damping: 25, stiffness: 200 }}
                             className="lg:hidden fixed inset-0 z-50 bg-background flex flex-col"
                         >
-                            {activePanel === 'product_detail' && <ProductDetailPanel />}
+                            {activePanel === 'product_detail' && <ProductIntelligencePanel />}
                             {activePanel === 'compare' && <ProductComparePanel />}
                             {activePanel === 'cart' && <CartPanel />}
                             {activePanel === 'checkout' && <CheckoutPanel />}

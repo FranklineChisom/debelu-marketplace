@@ -335,10 +335,11 @@ export default function CheckoutPage() {
             // Update existing
             updateAddress({ ...editingAddress, ...addressData });
         } else {
-            // Add new
+            // Add new - omit id from addressData if it exists and use generated one
+            const { id: _, ...addressDataWithoutId } = addressData;
             const newAddress: Address = {
                 id: crypto.randomUUID(),
-                ...addressData,
+                ...addressDataWithoutId,
                 isDefault: addresses.length === 0,
             };
             addAddress(newAddress);
@@ -358,10 +359,10 @@ export default function CheckoutPage() {
     };
 
     const handleSetDefault = (id: string) => {
-        setAddresses(addresses.map(addr => ({
-            ...addr,
-            isDefault: addr.id === id
-        })));
+        // Update each address to set the new default
+        addresses.forEach(addr => {
+            updateAddress({ ...addr, isDefault: addr.id === id });
+        });
     };
 
     const selectedAddressData = addresses.find((a) => a.id === selectedAddress);
@@ -952,9 +953,9 @@ export default function CheckoutPage() {
                                     <p className="text-sm font-medium text-muted-foreground">Where is this?</p>
                                     <div className="grid grid-cols-3 gap-3">
                                         {([
-                                            { type: "hostel" as AddressType, icon: Home, label: "Hostel", desc: "Hall of residence" },
-                                            { type: "academic" as AddressType, icon: GraduationCap, label: "Academic", desc: "Faculty or library" },
-                                            { type: "other" as AddressType, icon: Building, label: "Other", desc: "Any other location" },
+                                            { type: "Home" as const, icon: Home, label: "Hostel", desc: "Hall of residence" },
+                                            { type: "Work" as const, icon: GraduationCap, label: "Academic", desc: "Faculty or library" },
+                                            { type: "Other" as const, icon: Building, label: "Other", desc: "Any other location" },
                                         ]).map(({ type, icon: Icon, label, desc }) => {
                                             const isSelected = addressForm.type === type;
                                             return (

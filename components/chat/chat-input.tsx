@@ -88,6 +88,7 @@ export function ChatInput({
 
                             {/* Textarea */}
                             <textarea
+                                suppressHydrationWarning
                                 ref={textareaRef}
                                 value={input}
                                 onChange={handleInputChange}

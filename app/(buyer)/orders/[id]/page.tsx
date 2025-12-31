@@ -208,7 +208,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                                 <div
                                     className="absolute top-4 left-3 h-0.5 bg-primary transition-all"
                                     style={{
-                                        width: `${(currentStatusIndex / (statusOrder.length - 1)) * 100}%`,
+                                        width: `${(currentStatusIndex / (STATUS_ORDER.length - 1)) * 100}%`,
                                     }}
                                 />
                                 <div className="relative flex justify-between">
