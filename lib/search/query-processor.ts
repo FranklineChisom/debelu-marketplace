@@ -20,7 +20,7 @@ export async function processQuery(userQuery: string, history: any[] = []): Prom
         console.log(`[QueryProcessor] Analyzing: "${userQuery}"`);
 
         const { object } = await generateObject({
-            model: groq('llama-3.1-70b-versatile'),
+            model: groq('llama-3.3-70b-versatile'),
             schema: SearchIntentSchema,
             system: `You are an advanced Search Intent Extractor for a university marketplace.
             Analyze the user's query and extract PRECISE structural parameters.
@@ -37,14 +37,17 @@ export async function processQuery(userQuery: string, history: any[] = []): Prom
                - "best", "premium" -> sort: "rating"
             4. If no clear product is found, use "popular" as query.
             
-            EXPLAIN YOUR REASONING:
-            Always provide a 'reasoning' string explaining your correction logic briefly.`,
+            reasoning field INSTRUCTIONS:
+            - You MUST provide a detailed "Chain of Thought" explaining how you processed the query.
+            - Start with "I detected..." or "I noticed...".
+            - Explain any corrections (typos), extractions (tags), or removals (filler words).
+            - Example: "I detected a phonetic typo in 'lpp' and corrected it to 'laptop'. I also extracted 'cheap' as a price sensitivity signal and set the sort order to Price Low-to-High."`,
             prompt: `User Query: "${userQuery}"\nContext: ${history.slice(-2).join(' ')}`
         });
 
         // Ensure reasoning exists even if LLM omitted it (soft fix)
         if (!object.reasoning) {
-            object.reasoning = `Analyzed query structure and extracted core terms: "${object.query}"`;
+            object.reasoning = `Analyzed "${userQuery}" and extracted core intent for "${object.query}".`;
         }
 
         console.log("[QueryProcessor] Extracted Intent:", object);
@@ -57,10 +60,18 @@ export async function processQuery(userQuery: string, history: any[] = []): Prom
             .replace(/\b(cheap|expensive|affordable|budget|premium|best|good|great|nice|top)\b/gi, '')
             .replace(/\s+/g, ' ')
             .trim();
+
+        // Generate dynamic fallback reasoning
+        const removedWords = userQuery.split(' ').filter(w => !cleanQuery.includes(w) && w.length > 2);
+        let fallbackReasoning = "I simplified the search query to focus on the core product.";
+        if (removedWords.length > 0) {
+            fallbackReasoning = `I focused on "${cleanQuery}" by filtering out conversational filler words like "${removedWords.slice(0, 3).join('", "')}".`;
+        }
+
         return {
             query: cleanQuery || userQuery,
             sort: 'relevance',
-            reasoning: "I manually simplified the query to focus on key terms." // Nicer fallback message
+            reasoning: fallbackReasoning
         };
     }
 }

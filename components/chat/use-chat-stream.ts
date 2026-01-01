@@ -16,6 +16,7 @@ interface ChatMessage {
     createdAt: Date;
     timestamp?: Date;
     toolInvocations?: ToolInvocation[];
+    thought?: string;
 }
 
 interface UseChatStreamOptions {
@@ -88,6 +89,7 @@ export function useChatStream({
                 id: assistantId,
                 role: 'assistant',
                 content: '',
+                thought: '',
                 createdAt: new Date(),
                 timestamp: new Date(),
                 toolInvocations: []
@@ -98,6 +100,7 @@ export function useChatStream({
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let finalContent = "";
+            let currentThought = ""; // Track reasoning text
             let buffer = "";
 
             while (true) {
@@ -140,13 +143,18 @@ export function useChatStream({
 
                             toolInvocationsRef.current.set(toolData.toolCallId, invocation);
 
+                            // UPDATE THOUGHT: Start of search
+                            if (toolData.toolName === 'search_marketplace') {
+                                currentThought = "Analyzing your request...";
+                            }
+
                             // Notify callback for UI panel tools
                             if (onToolCall) {
                                 onToolCall(invocation);
                             }
 
                             // Update message with pending tool
-                            updateAssistantMessage(assistantId, finalContent, Array.from(toolInvocationsRef.current.values()));
+                            updateAssistantMessage(assistantId, finalContent, Array.from(toolInvocationsRef.current.values()), currentThought);
                         } catch {
                             // Skip malformed tool call lines
                         }
@@ -163,11 +171,21 @@ export function useChatStream({
                                 existing.result = resultData.result;
                                 toolInvocationsRef.current.set(resultData.toolCallId, existing);
 
+                                // UPDATE THOUGHT: Update with actual reasoning
+                                if (existing.toolName === 'search_marketplace') {
+                                    const result = existing.result as any;
+                                    if (result?.info?.reasoning) {
+                                        currentThought = result.info.reasoning;
+                                    } else if (typeof result === 'object' && result?.reasoning) {
+                                        currentThought = result.reasoning;
+                                    }
+                                }
+
                                 // Handle side-effect tools (panel opening)
                                 handleToolSideEffects(existing);
 
                                 // Update message with completed tool
-                                updateAssistantMessage(assistantId, finalContent, Array.from(toolInvocationsRef.current.values()));
+                                updateAssistantMessage(assistantId, finalContent, Array.from(toolInvocationsRef.current.values()), currentThought);
                             }
                         } catch {
                             // Skip malformed result lines
@@ -186,6 +204,7 @@ export function useChatStream({
                         ? {
                             ...m,
                             content: finalContent,
+                            thought: currentThought,
                             toolInvocations: Array.from(toolInvocationsRef.current.values())
                         }
                         : m
@@ -196,6 +215,7 @@ export function useChatStream({
             const finalAssistantMsg: ChatMessage = {
                 ...assistantMsg,
                 content: finalContent,
+                thought: currentThought,
                 toolInvocations: Array.from(toolInvocationsRef.current.values())
             };
 
@@ -224,9 +244,9 @@ export function useChatStream({
     }, [sessionId, messages, addMessage, onFinish, onToolCall, setActivePanel, setPanelData]);
 
     // Helper: Update assistant message in state
-    const updateAssistantMessage = (id: string, content: string, tools: ToolInvocation[]) => {
+    const updateAssistantMessage = (id: string, content: string, tools: ToolInvocation[], thought?: string) => {
         setMessages(prev => prev.map(m =>
-            m.id === id ? { ...m, content, toolInvocations: tools } : m
+            m.id === id ? { ...m, content, toolInvocations: tools, thought } : m
         ));
     };
 

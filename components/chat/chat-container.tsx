@@ -74,7 +74,6 @@ export const ChatContainer = (props: ChatContainerProps) => {
                             {displayMessages.map((msg) => (
                                 <MessageBubble key={msg.id} message={msg} />
                             ))}
-                            {isTyping && <TypingIndicator />}
                         </div>
                     )}
                 </ScrollArea>

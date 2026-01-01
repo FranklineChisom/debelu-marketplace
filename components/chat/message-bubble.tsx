@@ -10,6 +10,7 @@ import { DeliveryMap } from "./delivery-map";
 import { ToolRenderer } from "./tool-renderer";
 import { haptics } from "@/lib/haptics";
 import type { ToolInvocation } from "@/lib/chat/tools";
+import { ThinkingIndicator } from "./thinking-indicator";
 
 interface MessageBubbleProps {
     message: Message;
@@ -73,6 +74,14 @@ export const MessageBubble = ({ message, isLast }: MessageBubbleProps) => {
 
             <div className={cn("flex flex-col max-w-[85%] lg:max-w-[70%] gap-2", !isAssistant && "items-end")}>
                 {/* Main Text Bubble */}
+                {/* Reasoning Indicator - ABOVE content if present */}
+                {message.thought && isAssistant && (
+                    <ThinkingIndicator
+                        thought={message.thought}
+                        isFinished={!!message.content} // If content exists, reasoning is likely done
+                    />
+                )}
+
                 {message.content && (
                     <div className={cn(
                         "relative px-5 py-3.5 rounded-[22px] text-[15px] leading-relaxed shadow-sm transition-all",

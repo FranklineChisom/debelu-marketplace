@@ -66,7 +66,12 @@ ONLY respond with plain text for:
 - Greetings like "hi" or "hello" (but still offer to help find products)
 - Questions about orders, delivery, or account
 
-TONE: Concise, warm, professional. Use markdown for formatting.`,
+TONE: Concise, warm, professional. Use markdown for formatting.
+
+AFTER calling search_marketplace:
+- You MUST provide a brief, friendly confirmation message (e.g., "I found these laptops for you.", "Here are some options based on your request.").
+- Vary your response phrasing. Do NOT use the same phrase every time.
+- Briefly mention 1-2 key highlights if relevant, but keep it short as the UI shows the products.`,
             messages,
             maxSteps: 5,
             tools: {
@@ -205,9 +210,10 @@ TONE: Concise, warm, professional. Use markdown for formatting.`,
                                 }
                             };
 
-                        } catch (error) {
+                        } catch (error: any) {
                             console.error("[Search Marketplace] Critical Error:", error);
-                            return "I encountered an error while searching for products. Please try again or specify your search.";
+                            // Return error data so the LLM can apologize in its own voice
+                            return JSON.stringify({ error: "Search failed", details: error.message });
                         }
                     },
                 }),
@@ -219,7 +225,7 @@ TONE: Concise, warm, professional. Use markdown for formatting.`,
                     execute: async ({ productIds }: { productIds: string[] }) => {
                         const supabase = await createClient();
                         const { data } = await supabase.from('products').select('*').in('id', productIds);
-                        return data || "No products found.";
+                        return data || [];
                     },
                 }),
                 open_ui_panel: tool({

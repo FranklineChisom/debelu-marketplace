@@ -17,6 +17,12 @@ export interface Message {
     };
 
     /**
+     * Real-time Reasoning
+     * The "Chain of Thought" or reasoning process explanation
+     */
+    thought?: string;
+
+    /**
      * Vercel AI SDK Tool Invocations
      * Supports streaming tool calls
      */

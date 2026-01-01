@@ -22,10 +22,15 @@ export function ProductCardChat({ product, expanded = false, className }: Produc
     const addItem = useCartStore((state) => state.addItem);
 
     // Safe image handling - handle both 'image' (single) and 'images' (array)
-    const imageUrl = product.image
-        || (product.images && product.images.length > 0
-            ? (typeof product.images[0] === 'string' ? product.images[0] : product.images[0]?.url)
-            : '/placeholder-image.png');
+    // Safe image handling - handle both 'image' (single) and 'images' (array)
+    // Ensure we never pass an empty string to Next.js Image
+    let rawImage = product.image;
+    if (!rawImage && product.images && product.images.length > 0) {
+        rawImage = typeof product.images[0] === 'string' ? product.images[0] : product.images[0]?.url;
+    }
+
+    // Final check: if rawImage is empty/null/undefined, use placeholder
+    const imageUrl = rawImage || '/placeholder-image.png';
 
     // Calculate discount percentage if compare price exists
     const hasDiscount = product.compareAtPrice && product.compareAtPrice > product.price;

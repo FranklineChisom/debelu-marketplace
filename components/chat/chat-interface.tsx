@@ -53,6 +53,7 @@ export function ChatInterface({ sessionId, initialMessages }: ChatInterfaceProps
             id: assistantId,
             role: 'assistant',
             content: '',
+            thought: '',
             timestamp: new Date()
         };
         setMessages(prev => [...prev, placeholder]);
@@ -86,6 +87,7 @@ export function ChatInterface({ sessionId, initialMessages }: ChatInterfaceProps
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let fullText = '';
+            let currentThought = '';
             let toolResults: unknown[] = [];
             let buffer = '';
 
@@ -137,12 +139,20 @@ export function ChatInterface({ sessionId, initialMessages }: ChatInterfaceProps
                                 fullText += data.textDelta || '';
                                 setMessages(prev => prev.map(m =>
                                     m.id === assistantId
-                                        ? { ...m, content: fullText }
+                                        ? { ...m, content: fullText, thought: currentThought }
                                         : m
                                 ));
                             }
                             else if (data.type === 'tool-call') {
                                 log(`TOOL CALL: ${data.toolName} args: ${JSON.stringify(data.input || data.args)}`);
+                                if (data.toolName === 'search_marketplace') {
+                                    currentThought = "Analyzing your request...";
+                                    setMessages(prev => prev.map(m =>
+                                        m.id === assistantId
+                                            ? { ...m, content: fullText, thought: currentThought }
+                                            : m
+                                    ));
+                                }
                             }
                             else if (data.type === 'tool-result') {
                                 log(`TOOL RESULT: ${data.toolName}`);
@@ -155,11 +165,15 @@ export function ChatInterface({ sessionId, initialMessages }: ChatInterfaceProps
 
                                 // Handle search results
                                 if (data.toolName === 'search_marketplace') {
+                                    // Update thought if reasoning exists
+                                    if (isSearchResultObject(result) && result.info?.reasoning) {
+                                        currentThought = result.info.reasoning;
+                                    } else if (result?.reasoning) {
+                                        currentThought = result.reasoning;
+                                    }
+
                                     if (isSearchResultObject(result)) {
                                         const { products, info } = result;
-                                        // Construct intelligent message
-                                        let msg = "";
-
                                         if (products.length > 0) {
                                             log(`Found ${products.length} products with metadata: ${JSON.stringify(info)}`);
                                             setActivePanel('intelligence');
@@ -167,37 +181,10 @@ export function ChatInterface({ sessionId, initialMessages }: ChatInterfaceProps
                                                 type: 'intelligence',
                                                 products: products
                                             });
-
-                                            msg = `I found ${products.length} products`;
-                                            if (info.correctedQuery && info.correctedQuery !== info.originalQuery) {
-                                                msg += ` for "${info.correctedQuery}" (corrected from "${info.originalQuery}")`;
-                                            } else {
-                                                msg += ` for "${info.originalQuery}"`;
-                                            }
-                                            if (info.intent) {
-                                                msg += ` sorted by ${info.intent.toLowerCase().replace('sort: ', '')}`;
-                                            }
-                                            msg += `. Take a look!`;
                                         } else {
                                             // 0 Results
-                                            msg = `I searched for "${info.correctedQuery || info.originalQuery}"`;
-                                            if (info.correctedQuery && info.correctedQuery !== info.originalQuery) {
-                                                msg += ` (corrected from "${info.originalQuery}")`;
-                                            }
-                                            msg += `, but I couldn't find any suitable matches in the marketplace.`;
+                                            log(`No products found for query: ${info.originalQuery}`);
                                         }
-
-                                        // Add AI Reasoning if available
-                                        if (info.reasoning) {
-                                            msg += `\n\n🧠 **Thinking:** ${info.reasoning}`;
-                                        }
-
-                                        fullText = msg;
-                                        setMessages(prev => prev.map(m =>
-                                            m.id === assistantId
-                                                ? { ...m, content: fullText }
-                                                : m
-                                        ));
                                     } else if (isProductArray(result)) {
                                         log(`Found ${result.length} products! Opening panel...`);
                                         setActivePanel('intelligence');
@@ -205,19 +192,13 @@ export function ChatInterface({ sessionId, initialMessages }: ChatInterfaceProps
                                             type: 'intelligence',
                                             products: result
                                         });
-                                        // Set a nice response text
-                                        fullText = `I found ${result.length} products for you! Take a look at the options I've displayed.`;
-                                        setMessages(prev => prev.map(m =>
-                                            m.id === assistantId
-                                                ? { ...m, content: fullText }
-                                                : m
-                                        ));
+                                        // Let LLM generate response
                                     } else if (typeof result === 'string') {
                                         log(`Result is string message`);
                                         fullText = result;
                                         setMessages(prev => prev.map(m =>
                                             m.id === assistantId
-                                                ? { ...m, content: fullText }
+                                                ? { ...m, content: fullText, thought: currentThought }
                                                 : m
                                         ));
                                     }
@@ -240,7 +221,7 @@ export function ChatInterface({ sessionId, initialMessages }: ChatInterfaceProps
                             fullText += text;
                             setMessages(prev => prev.map(m =>
                                 m.id === assistantId
-                                    ? { ...m, content: fullText }
+                                    ? { ...m, content: fullText, thought: currentThought }
                                     : m
                             ));
                         } catch (e) {
@@ -253,6 +234,15 @@ export function ChatInterface({ sessionId, initialMessages }: ChatInterfaceProps
                         try {
                             const toolCall = JSON.parse(line.slice(2));
                             log(`Tool: ${toolCall.toolName} args: ${JSON.stringify(toolCall.args)}`);
+
+                            if (toolCall.toolName === 'search_marketplace') {
+                                currentThought = "Analyzing your request...";
+                                setMessages(prev => prev.map(m =>
+                                    m.id === assistantId
+                                        ? { ...m, content: fullText, thought: currentThought }
+                                        : m
+                                ));
+                            }
                         } catch (e) {
                             log(`Parse error for tool call: ${e}`);
                         }
@@ -270,6 +260,11 @@ export function ChatInterface({ sessionId, initialMessages }: ChatInterfaceProps
                                 const toolOutput = result.result;
 
                                 if (isSearchResultObject(toolOutput)) {
+                                    // Extract Reasoning
+                                    if (toolOutput.info?.reasoning) {
+                                        currentThought = toolOutput.info.reasoning;
+                                    }
+
                                     const { products, info } = toolOutput;
                                     // Construct intelligent message
                                     let msg = "";
@@ -302,15 +297,12 @@ export function ChatInterface({ sessionId, initialMessages }: ChatInterfaceProps
                                         msg += `, but I couldn't find any suitable matches in the marketplace.`;
                                     }
 
-                                    // Add AI Reasoning if available
-                                    if (info.reasoning) {
-                                        msg += `\n\n🧠 **Thinking:** ${info.reasoning}`;
-                                    }
+                                    // REMOVED: Text appending of reasoning
 
                                     fullText = msg;
                                     setMessages(prev => prev.map(m =>
                                         m.id === assistantId
-                                            ? { ...m, content: fullText }
+                                            ? { ...m, content: fullText, thought: currentThought }
                                             : m
                                     ));
                                 } else if (isProductArray(toolOutput)) {
@@ -320,13 +312,7 @@ export function ChatInterface({ sessionId, initialMessages }: ChatInterfaceProps
                                         type: 'intelligence',
                                         products: toolOutput
                                     });
-
-                                    fullText = `I found ${toolOutput.length} products for you! Take a look at the options I've displayed.`;
-                                    setMessages(prev => prev.map(m =>
-                                        m.id === assistantId
-                                            ? { ...m, content: fullText }
-                                            : m
-                                    ));
+                                    // Let LLM generate response
                                 }
                             }
                         } catch (e) {
@@ -346,6 +332,7 @@ export function ChatInterface({ sessionId, initialMessages }: ChatInterfaceProps
                 role: 'assistant',
                 content: fullText || 'I processed your request.',
                 timestamp: new Date(),
+                thought: currentThought,
                 toolInvocations: toolResults.length > 0 ? toolResults as Message['toolInvocations'] : undefined
             };
             setMessages(prev => prev.map(m => m.id === assistantId ? finalMsg : m));
