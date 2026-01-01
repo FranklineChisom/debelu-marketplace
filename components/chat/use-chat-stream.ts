@@ -43,6 +43,7 @@ export function useChatStream({
     const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
     const [isLoading, setIsLoading] = useState(false);
     const [input, setInput] = useState("");
+    const [debugLogs, setDebugLogs] = useState<string[]>([]);
     const addMessage = useChatStore((state) => state.addMessage);
     const setActivePanel = useChatStore((state) => state.setActivePanel);
     const setPanelData = useChatStore((state) => state.setPanelData);
@@ -112,6 +113,9 @@ export function useChatStream({
 
                 for (const line of lines) {
                     if (!line.trim()) continue;
+
+                    // DEBUG: Log all protocol lines to UI
+                    setDebugLogs(prev => [...prev.slice(-50), `${new Date().toLocaleTimeString()} | ${line.substring(0, 150)}`]);
 
                     // === TEXT CONTENT (0:) ===
                     if (line.startsWith(STREAM_PROTOCOL.TEXT)) {
@@ -202,6 +206,9 @@ export function useChatStream({
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
             console.error("Stream failed:", errorMessage);
 
+            // Add error to debug logs
+            setDebugLogs(prev => [...prev, `ERROR: ${errorMessage}`]);
+
             // Add error message to chat
             const errorMsg: ChatMessage = {
                 id: crypto.randomUUID(),
@@ -255,6 +262,7 @@ export function useChatStream({
         append,
         input,
         setInput,
-        isLoading
+        isLoading,
+        debugLogs
     };
 }

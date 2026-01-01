@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { useChatStream } from "@/components/chat/use-chat-stream";
+import { useState, useCallback } from "react";
 import { useChatStore } from "@/stores";
 import { ChatContainer } from "@/components/chat/chat-container";
 import type { Message } from "@/types/chat";
+import { isProductArray } from "@/lib/chat/tools";
 
 interface ChatInterfaceProps {
     sessionId: string;
@@ -12,65 +12,315 @@ interface ChatInterfaceProps {
 }
 
 /**
- * Apple-Standard Chat Interface
- * 
- * Main chat component using the custom stream hook
- * for robust tool handling.
+ * Simple Chat Interface with direct fetch
+ * Handles tool results by parsing the response
  */
 export function ChatInterface({ sessionId, initialMessages }: ChatInterfaceProps) {
-    const [lastError, setLastError] = useState<string | null>(null);
+    const [messages, setMessages] = useState<Message[]>(initialMessages);
+    const [isLoading, setIsLoading] = useState(false);
+    const [showDebug, setShowDebug] = useState(false);
+    const [debugLogs, setDebugLogs] = useState<string[]>([]);
+    const [error, setError] = useState<string | null>(null);
 
-    // Custom Robust Hook
-    const {
-        messages,
-        append,
-        isLoading
-    } = useChatStream({
-        sessionId,
-        initialMessages: initialMessages as Parameters<typeof useChatStream>[0]['initialMessages'],
-        onFinish: (message) => {
-            console.log("Stream finished:", message.id);
-        }
-    });
+    const setActivePanel = useChatStore((state) => state.setActivePanel);
+    const setPanelData = useChatStore((state) => state.setPanelData);
+    const addMessage = useChatStore((state) => state.addMessage);
+
+    const log = useCallback((msg: string) => {
+        console.log('[Chat]', msg);
+        setDebugLogs(prev => [...prev.slice(-100), `${new Date().toLocaleTimeString()} | ${msg}`]);
+    }, []);
 
     const handleSend = async (content: string) => {
-        if (!content.trim()) return;
+        if (!content.trim() || isLoading) return;
+
+        log(`SENDING: ${content}`);
+        setError(null);
+
+        // Add user message
+        const userMsg: Message = {
+            id: crypto.randomUUID(),
+            role: 'user',
+            content,
+            timestamp: new Date()
+        };
+        setMessages(prev => [...prev, userMsg]);
+        setIsLoading(true);
+
+        // Add placeholder for assistant
+        const assistantId = crypto.randomUUID();
+        const placeholder: Message = {
+            id: assistantId,
+            role: 'assistant',
+            content: '',
+            timestamp: new Date()
+        };
+        setMessages(prev => [...prev, placeholder]);
 
         try {
-            await append({
-                role: 'user',
-                content,
-                id: crypto.randomUUID()
+            // Call API
+            log('Calling /api/chat...');
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: [...messages, userMsg].map(m => ({
+                        role: m.role,
+                        content: m.content
+                    }))
+                })
             });
+
+            log(`Response status: ${response.status}`);
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`API Error ${response.status}: ${errText.slice(0, 100)}`);
+            }
+
+            if (!response.body) {
+                throw new Error('No response body');
+            }
+
+            // Read stream
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullText = '';
+            let toolResults: unknown[] = [];
+            let buffer = '';
+
+            log('Reading stream...');
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                    log('Stream done');
+                    break;
+                }
+
+                const chunk = decoder.decode(value, { stream: true });
+                buffer += chunk;
+
+                // Process complete lines
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+
+                    log(`LINE: ${line.substring(0, 80)}`);
+
+                    // Try to parse as JSON first (fullStream format)
+                    if (line.startsWith('{')) {
+                        // Check if JSON is complete by counting braces
+                        let braceCount = 0;
+                        let inString = false;
+                        for (let i = 0; i < line.length; i++) {
+                            const char = line[i];
+                            if (char === '"' && (i === 0 || line[i - 1] !== '\\')) inString = !inString;
+                            if (!inString) {
+                                if (char === '{') braceCount++;
+                                if (char === '}') braceCount--;
+                            }
+                        }
+
+                        if (braceCount !== 0) {
+                            log(`Incomplete JSON (braceCount: ${braceCount}), buffering...`);
+                            buffer = line + '\n' + buffer;
+                            continue;
+                        }
+
+                        try {
+                            const data = JSON.parse(line);
+
+                            if (data.type === 'text-delta') {
+                                fullText += data.textDelta || '';
+                                setMessages(prev => prev.map(m =>
+                                    m.id === assistantId
+                                        ? { ...m, content: fullText }
+                                        : m
+                                ));
+                            }
+                            else if (data.type === 'tool-call') {
+                                log(`TOOL CALL: ${data.toolName} args: ${JSON.stringify(data.input || data.args)}`);
+                            }
+                            else if (data.type === 'tool-result') {
+                                log(`TOOL RESULT: ${data.toolName}`);
+                                const result = data.output; // fullStream uses 'output' field
+                                log(`Result type: ${typeof result}, isArray: ${Array.isArray(result)}`);
+                                log(`Result preview: ${JSON.stringify(result).substring(0, 200)}`);
+                                log(`isProductArray: ${isProductArray(result)}`);
+
+                                toolResults.push({ toolCallId: data.toolCallId, toolName: data.toolName, result });
+
+                                // Handle search results
+                                if (data.toolName === 'search_marketplace') {
+                                    if (isProductArray(result)) {
+                                        log(`Found ${result.length} products! Opening panel...`);
+                                        setActivePanel('intelligence');
+                                        setPanelData({
+                                            type: 'intelligence',
+                                            products: result
+                                        });
+                                        // Set a nice response text
+                                        fullText = `I found ${result.length} products for you! Take a look at the options I've displayed.`;
+                                        setMessages(prev => prev.map(m =>
+                                            m.id === assistantId
+                                                ? { ...m, content: fullText }
+                                                : m
+                                        ));
+                                    } else if (typeof result === 'string') {
+                                        log(`Result is string message`);
+                                        fullText = result;
+                                        setMessages(prev => prev.map(m =>
+                                            m.id === assistantId
+                                                ? { ...m, content: fullText }
+                                                : m
+                                        ));
+                                    }
+                                }
+                            }
+                            else if (data.type === 'finish') {
+                                log(`FINISH: ${data.finishReason}`);
+                            }
+                            continue;
+                        } catch {
+                            // Not valid JSON, try other formats
+                        }
+                    }
+
+                    // Vercel AI Data Stream Protocol formats
+                    // Text content: 0:"text"
+                    if (line.startsWith('0:')) {
+                        try {
+                            const text = JSON.parse(line.slice(2));
+                            fullText += text;
+                            setMessages(prev => prev.map(m =>
+                                m.id === assistantId
+                                    ? { ...m, content: fullText }
+                                    : m
+                            ));
+                        } catch (e) {
+                            log(`Parse error for text: ${e}`);
+                        }
+                    }
+                    // Tool call: 9:{...}
+                    else if (line.startsWith('9:')) {
+                        log('TOOL CALL (9:) detected');
+                        try {
+                            const toolCall = JSON.parse(line.slice(2));
+                            log(`Tool: ${toolCall.toolName} args: ${JSON.stringify(toolCall.args)}`);
+                        } catch (e) {
+                            log(`Parse error for tool call: ${e}`);
+                        }
+                    }
+                    // Tool result: a:{...}
+                    else if (line.startsWith('a:')) {
+                        log('TOOL RESULT (a:) detected');
+                        try {
+                            const result = JSON.parse(line.slice(2));
+                            log(`Result: ${JSON.stringify(result).substring(0, 100)}`);
+                            toolResults.push(result);
+
+                            // Handle search results
+                            if (result.result && isProductArray(result.result)) {
+                                log(`Found ${result.result.length} products`);
+                                setActivePanel('intelligence');
+                                setPanelData({
+                                    type: 'intelligence',
+                                    products: result.result
+                                });
+                            }
+                        } catch (e) {
+                            log(`Parse error for tool result: ${e}`);
+                        }
+                    }
+                    // Finish: d:{...}
+                    else if (line.startsWith('d:')) {
+                        log('FINISH signal (d:)');
+                    }
+                }
+            }
+
+            // Final update
+            const finalMsg: Message = {
+                id: assistantId,
+                role: 'assistant',
+                content: fullText || 'I processed your request.',
+                timestamp: new Date(),
+                toolInvocations: toolResults.length > 0 ? toolResults as Message['toolInvocations'] : undefined
+            };
+            setMessages(prev => prev.map(m => m.id === assistantId ? finalMsg : m));
+            addMessage(sessionId, finalMsg);
+
+            log(`Complete. Text length: ${fullText.length}, Tools: ${toolResults.length}`);
+
         } catch (e: unknown) {
-            const errorMsg = e instanceof Error ? e.message : "Failed to send message.";
-            console.error("Failed to append message:", errorMsg);
-            setLastError(errorMsg);
+            const errMsg = e instanceof Error ? e.message : 'Unknown error';
+            log(`ERROR: ${errMsg}`);
+            setError(errMsg);
+            // Remove placeholder
+            setMessages(prev => prev.filter(m => m.id !== assistantId));
+        } finally {
+            setIsLoading(false);
         }
     };
-
-    // Cast messages to Message[] for ChatContainer compatibility
-    const displayMessages = messages.map(m => ({
-        ...m,
-        timestamp: m.timestamp || m.createdAt || new Date()
-    })) as Message[];
 
     return (
         <div className="flex-1 w-full h-full flex flex-col relative">
             <ChatContainer
-                messages={displayMessages}
+                messages={messages}
                 isLoading={isLoading}
                 onSend={handleSend}
             />
 
+            {/* Debug Toggle */}
+            <button
+                onClick={() => setShowDebug(!showDebug)}
+                className="fixed bottom-4 right-4 z-50 px-3 py-2 bg-orange-500 text-white text-xs font-bold rounded-full shadow-lg hover:bg-orange-600"
+            >
+                {showDebug ? 'Hide Debug' : `Debug (${debugLogs.length})`}
+            </button>
+
+            {/* Debug Panel */}
+            {showDebug && (
+                <div className="fixed bottom-16 right-4 w-[420px] max-h-96 overflow-auto bg-black/95 text-green-400 text-[11px] font-mono p-3 rounded-xl shadow-2xl z-50 border border-green-500/30">
+                    <div className="flex justify-between items-center mb-2 text-white sticky top-0 bg-black/90 pb-2">
+                        <span className="font-bold">Stream Debug</span>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setDebugLogs([])}
+                                className="px-2 py-1 bg-red-600 rounded text-xs"
+                            >
+                                Clear
+                            </button>
+                            <button
+                                onClick={() => navigator.clipboard.writeText(debugLogs.join('\n'))}
+                                className="px-2 py-1 bg-green-600 rounded text-xs"
+                            >
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+                    {debugLogs.length === 0 ? (
+                        <div className="text-gray-500">Send a message to see logs...</div>
+                    ) : (
+                        debugLogs.map((log, i) => (
+                            <div key={i} className="border-b border-gray-800 py-1 break-all whitespace-pre-wrap">
+                                {log}
+                            </div>
+                        ))
+                    )}
+                </div>
+            )}
+
             {/* Error Toast */}
-            {lastError && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-destructive/90 text-white px-4 py-2 rounded-full text-sm shadow-lg backdrop-blur-sm z-50 animate-in fade-in slide-in-from-top-2">
-                    {lastError}
-                    <button onClick={() => setLastError(null)} className="ml-2 hover:opacity-80">✕</button>
+            {error && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg text-sm shadow-lg z-50">
+                    {error}
+                    <button onClick={() => setError(null)} className="ml-2 font-bold">✕</button>
                 </div>
             )}
         </div>
     );
 }
-
