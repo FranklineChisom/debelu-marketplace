@@ -43,7 +43,21 @@ export interface ProductResult {
 }
 
 /** Result from search_marketplace tool */
-export type SearchMarketplaceResult = ProductResult[] | string;
+export interface SearchMetadata {
+    originalQuery: string;
+    correctedQuery?: string;
+    intent?: string; // e.g. "sort:price_asc"
+    method?: string; // e.g. "Hybrid", "Fuzzy Fallback"
+    tags?: string[];
+    reasoning?: string; // AI explanation
+}
+
+export interface SearchResultObject {
+    products: ProductResult[];
+    info: SearchMetadata;
+}
+
+export type SearchMarketplaceResult = ProductResult[] | SearchResultObject | string;
 
 /** Result from compare_products tool */
 export type CompareProductsResult = ProductResult[] | string;
@@ -84,6 +98,17 @@ export function isProductArray(result: unknown): result is ProductResult[] {
     return Array.isArray(result) && result.length > 0 && typeof result[0] === 'object' && 'id' in result[0];
 }
 
+/** Type guard: Check if result is a Search Result Object with metadata */
+export function isSearchResultObject(result: unknown): result is SearchResultObject {
+    return (
+        typeof result === 'object' &&
+        result !== null &&
+        'products' in result &&
+        'info' in result &&
+        Array.isArray((result as SearchResultObject).products)
+    );
+}
+
 /** Type guard: Check if invocation has a successful result */
 export function hasResult(invocation: ToolInvocation): boolean {
     return invocation.state === 'result' && invocation.result !== undefined;
@@ -98,6 +123,9 @@ export function isLoading(invocation: ToolInvocation): boolean {
 export function extractProducts(result: unknown): ProductResult[] {
     if (isProductArray(result)) {
         return result;
+    }
+    if (isSearchResultObject(result)) {
+        return result.products;
     }
     return [];
 }

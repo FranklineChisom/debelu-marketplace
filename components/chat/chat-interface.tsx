@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { useChatStore } from "@/stores";
 import { ChatContainer } from "@/components/chat/chat-container";
 import type { Message } from "@/types/chat";
-import { isProductArray } from "@/lib/chat/tools";
+import { isProductArray, isSearchResultObject } from "@/lib/chat/tools";
 
 interface ChatInterfaceProps {
     sessionId: string;
@@ -155,7 +155,50 @@ export function ChatInterface({ sessionId, initialMessages }: ChatInterfaceProps
 
                                 // Handle search results
                                 if (data.toolName === 'search_marketplace') {
-                                    if (isProductArray(result)) {
+                                    if (isSearchResultObject(result)) {
+                                        const { products, info } = result;
+                                        // Construct intelligent message
+                                        let msg = "";
+
+                                        if (products.length > 0) {
+                                            log(`Found ${products.length} products with metadata: ${JSON.stringify(info)}`);
+                                            setActivePanel('intelligence');
+                                            setPanelData({
+                                                type: 'intelligence',
+                                                products: products
+                                            });
+
+                                            msg = `I found ${products.length} products`;
+                                            if (info.correctedQuery && info.correctedQuery !== info.originalQuery) {
+                                                msg += ` for "${info.correctedQuery}" (corrected from "${info.originalQuery}")`;
+                                            } else {
+                                                msg += ` for "${info.originalQuery}"`;
+                                            }
+                                            if (info.intent) {
+                                                msg += ` sorted by ${info.intent.toLowerCase().replace('sort: ', '')}`;
+                                            }
+                                            msg += `. Take a look!`;
+                                        } else {
+                                            // 0 Results
+                                            msg = `I searched for "${info.correctedQuery || info.originalQuery}"`;
+                                            if (info.correctedQuery && info.correctedQuery !== info.originalQuery) {
+                                                msg += ` (corrected from "${info.originalQuery}")`;
+                                            }
+                                            msg += `, but I couldn't find any suitable matches in the marketplace.`;
+                                        }
+
+                                        // Add AI Reasoning if available
+                                        if (info.reasoning) {
+                                            msg += `\n\n🧠 **Thinking:** ${info.reasoning}`;
+                                        }
+
+                                        fullText = msg;
+                                        setMessages(prev => prev.map(m =>
+                                            m.id === assistantId
+                                                ? { ...m, content: fullText }
+                                                : m
+                                        ));
+                                    } else if (isProductArray(result)) {
                                         log(`Found ${result.length} products! Opening panel...`);
                                         setActivePanel('intelligence');
                                         setPanelData({
@@ -223,13 +266,68 @@ export function ChatInterface({ sessionId, initialMessages }: ChatInterfaceProps
                             toolResults.push(result);
 
                             // Handle search results
-                            if (result.result && isProductArray(result.result)) {
-                                log(`Found ${result.result.length} products`);
-                                setActivePanel('intelligence');
-                                setPanelData({
-                                    type: 'intelligence',
-                                    products: result.result
-                                });
+                            if (result.result) {
+                                const toolOutput = result.result;
+
+                                if (isSearchResultObject(toolOutput)) {
+                                    const { products, info } = toolOutput;
+                                    // Construct intelligent message
+                                    let msg = "";
+
+                                    if (products.length > 0) {
+                                        log(`Found ${products.length} products (Stream)`);
+                                        setActivePanel('intelligence');
+                                        setPanelData({
+                                            type: 'intelligence',
+                                            products: products
+                                        });
+
+                                        msg = `I found ${products.length} products`;
+                                        if (info.correctedQuery && info.correctedQuery !== info.originalQuery) {
+                                            msg += ` for "${info.correctedQuery}" (corrected from "${info.originalQuery}")`;
+                                        } else {
+                                            msg += ` for "${info.originalQuery}"`;
+                                        }
+                                        if (info.intent) {
+                                            msg += ` sorted by ${info.intent.toLowerCase().replace('sort: ', '')}`;
+                                        }
+                                        msg += `. Take a look!`;
+                                    } else {
+                                        // 0 Results: Don't open panel, just explain
+                                        log(`No products found (Stream)`);
+                                        msg = `I searched for "${info.correctedQuery || info.originalQuery}"`;
+                                        if (info.correctedQuery && info.correctedQuery !== info.originalQuery) {
+                                            msg += ` (corrected from "${info.originalQuery}")`;
+                                        }
+                                        msg += `, but I couldn't find any suitable matches in the marketplace.`;
+                                    }
+
+                                    // Add AI Reasoning if available
+                                    if (info.reasoning) {
+                                        msg += `\n\n🧠 **Thinking:** ${info.reasoning}`;
+                                    }
+
+                                    fullText = msg;
+                                    setMessages(prev => prev.map(m =>
+                                        m.id === assistantId
+                                            ? { ...m, content: fullText }
+                                            : m
+                                    ));
+                                } else if (isProductArray(toolOutput)) {
+                                    log(`Found ${toolOutput.length} products (Stream Array)`);
+                                    setActivePanel('intelligence');
+                                    setPanelData({
+                                        type: 'intelligence',
+                                        products: toolOutput
+                                    });
+
+                                    fullText = `I found ${toolOutput.length} products for you! Take a look at the options I've displayed.`;
+                                    setMessages(prev => prev.map(m =>
+                                        m.id === assistantId
+                                            ? { ...m, content: fullText }
+                                            : m
+                                    ));
+                                }
                             }
                         } catch (e) {
                             log(`Parse error for tool result: ${e}`);

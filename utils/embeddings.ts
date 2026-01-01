@@ -26,20 +26,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     // The output is a Tensor, we need a plain array
     const embedding = Array.from(output.data);
 
-    // NOTE: The 'all-MiniLM-L6-v2' model usually returns 384 dimensions.
-    // BUT your Supabase schema expects 1536 (OpenAI standard).
-    // We must PAD the vector to 1536 dimensions to fit the column constraints without later altering schema.
-    // Or, ideally, we should update the schema to vector(384).
-    // For now, to match the schema provided, we will pad with zeros.
-    // IMPORTANT: If we want to switch to OpenAI later, this padding is harmless (just wasted space).
-    // BUT for "Real AI" strictly, 384 matches are better.
-    // To respect the USER's existing schema constraints (1536), we pad.
-
-    // PADDING LOGIC:
-    const paddedEmbedding = new Array(1536).fill(0);
-    for (let i = 0; i < embedding.length; i++) {
-        paddedEmbedding[i] = Number(embedding[i]);
-    }
-
-    return paddedEmbedding;
+    // NOTE: We are now using the native 384 dimensions of the model.
+    // The database schema must be updated to vector(384).
+    return embedding as number[];
 }

@@ -6,6 +6,7 @@ import { Sparkles, Loader2 } from "lucide-react";
 import {
     ToolInvocation,
     isProductArray,
+    extractProducts,
     isLoading as isToolLoading
 } from "@/lib/chat/tools";
 import { ProductCardChat } from "./product-card-chat";
@@ -68,7 +69,7 @@ interface ProductResultRendererProps {
  * with Apple-style animations and loading states.
  */
 function ProductResultRenderer({ result, isLoading, label }: ProductResultRendererProps) {
-    const products = isProductArray(result) ? result : [];
+    const products = extractProducts(result);
 
     // Don't render if no products and not loading
     if (products.length === 0 && !isLoading) {

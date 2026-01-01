@@ -3,6 +3,7 @@ import { groq } from '@ai-sdk/groq';
 import { streamText, tool } from 'ai';
 import { z } from 'zod';
 import { createClient } from '@/utils/supabase/server';
+import { processQuery } from '@/lib/search/query-processor';
 
 export const maxDuration = 300;
 
@@ -76,123 +77,138 @@ TONE: Concise, warm, professional. Use markdown for formatting.`,
                         category: z.enum(["Electronics", "Fashion", "Health", "Food", "Home", "Beauty"]).optional(),
                         price_intent: z.enum(["low", "medium", "high"]).optional()
                     }),
-                    execute: async ({ query, category, price_intent }: { query?: string; category?: string; price_intent?: string }) => {
-                        // Debug: Log received parameters
-                        console.log("[Tool Call] search_marketplace received:", { query, category, price_intent });
+                    execute: async ({ query }: { query?: string }) => {
+                        try {
+                            const supabase = await createClient();
 
-                        // If query is empty, extract from the last user message
-                        let searchQuery = query?.trim() || "";
-                        if (!searchQuery) {
-                            // Get last user message to extract intent
-                            const lastUserMsg = messages.filter((m: { role: string }) => m.role === 'user').pop();
-                            if (lastUserMsg) {
-                                const content = (lastUserMsg as { content: string }).content || '';
-                                // Extract key terms (remove common words)
-                                const stopWords = ['find', 'me', 'some', 'show', 'i', 'want', 'need', 'looking', 'for', 'please', 'can', 'you', 'get', 'the', 'a', 'an'];
-                                searchQuery = content.toLowerCase()
-                                    .split(/\s+/)
-                                    .filter((w: string) => w.length > 2 && !stopWords.includes(w))
-                                    .join(' ') || 'popular';
-                                console.log("[Tool Call] Extracted query from user message:", searchQuery);
+                            // 1. INTENT EXTRACTION (The "Brain")
+                            // Even if a query is passed, we re-process it to get deep understanding (category, sort, etc.)
+                            // If no query, we extract from chat history.
+                            let rawQuery = query?.trim() || "";
+                            if (!rawQuery) {
+                                const lastUserMsg = messages.filter((m: { role: string }) => m.role === 'user').pop();
+                                rawQuery = (lastUserMsg as { content: string })?.content || "";
                             }
-                        }
 
-                        if (!searchQuery) searchQuery = "popular";
-                        console.log("[Tool Call] Final searchQuery:", searchQuery);
+                            // Use LLM to extract structured intent
+                            const intent = await processQuery(rawQuery, messages.map((m: any) => `${m.role}: ${m.content}`));
+                            console.log(`[Search Engine] Intent: ${JSON.stringify(intent)}`);
 
-                        const supabase = await createClient();
+                            const RRF_K = 60; // Standard RRF constant
+                            const scoreMap = new Map<string, { product: ProductRecord; score: number; methods: string[] }>();
 
-                        // --- STRATEGY: PARALLEL RETRIEVAL & WEIGHTED RANKING ---
-                        const scoreMap = new Map<string, ScoredProduct>();
+                            const addRankScore = (product: ProductRecord, rank: number, method: string) => {
+                                const existing = scoreMap.get(product.id) || { product, score: 0, methods: [] };
+                                // RRF Formula: 1 / (k + rank)
+                                existing.score += 1 / (RRF_K + rank);
+                                if (!existing.methods.includes(method)) existing.methods.push(method);
+                                scoreMap.set(product.id, existing);
+                            };
 
-                        const boostScore = (product: ProductRecord, points: number, signal: string) => {
-                            const existing = scoreMap.get(product.id) || { product, score: 0, signals: [] };
-                            existing.score += points;
-                            if (!existing.signals.includes(signal)) existing.signals.push(signal);
-                            scoreMap.set(product.id, existing);
-                        };
+                            const promises: Promise<void>[] = [];
 
-                        // 1. Define Retrieval Promisess
-                        const promises: Promise<void>[] = [];
-
-                        // Signal A: Vector Search (Semantic Understanding) - Weight: 50
-                        promises.push((async () => {
-                            try {
-                                const { generateEmbedding } = await import('@/utils/embeddings');
-                                const embedding = await generateEmbedding(searchQuery);
-                                const { data: vectorData } = await supabase.rpc('match_products', {
-                                    query_embedding: embedding,
-                                    match_threshold: 0.1, // Very loose to cast a wide net
-                                    match_count: 15,
-                                    category_filter: category || null
-                                });
-                                vectorData?.forEach((p: ProductRecord) => boostScore(p, 50, 'semantic'));
-                            } catch (e) {
-                                console.error("Vector signal failed", e);
-                            }
-                        })());
-
-                        // Signal B: Keyword Exact Match (Precision) - Weight: 100
-                        promises.push((async () => {
-                            const term = `%${searchQuery}%`;
-                            const { data: textData } = await supabase
-                                .from('products')
-                                .select('*')
-                                .or(`name.ilike.${term},description.ilike.${term}`)
-                                .limit(10);
-
-                            textData?.forEach((p: ProductRecord) => boostScore(p, 100, 'text_match'));
-                        })());
-
-                        // Signal C: Category Relevance (Context) - Weight: 10
-                        // We fetch a few popular items from the category as a baseline "safety net"
-                        if (category) {
+                            // 2. SIGNAL A: VECTOR SEARCH (Semantic)
                             promises.push((async () => {
-                                const { data: catData } = await supabase
+                                try {
+                                    const { generateEmbedding } = await import('@/utils/embeddings');
+                                    const embedding = await generateEmbedding(intent.query);
+
+                                    // Call the new Hybrid RPC function
+                                    const { data: vectorData, error } = await supabase.rpc('match_products', {
+                                        query_embedding: embedding,
+                                        match_threshold: 0.15, // Relaxed threshold for typos/fuzzy matches
+                                        match_count: 20,
+                                        category_filter: intent.category?.toLowerCase() || null,
+                                        price_min: intent.price_min || null,
+                                        price_max: intent.price_max || null
+                                    });
+
+                                    if (error) console.error("Vector RPC Error:", error);
+
+                                    vectorData?.forEach((p: any, index: number) => {
+                                        // Map RPC result back to ProductRecord structure if needed, or use as is
+                                        // RPC returns: id, name, description, category, price, images, similarity
+                                        addRankScore(p as ProductRecord, index + 1, 'vector'); // Rank is 1-based
+                                    });
+                                } catch (e) {
+                                    console.error("Vector signal failed", e);
+                                }
+                            })());
+
+                            // 3. SIGNAL B: KEYWORD SEARCH (Precision)
+                            promises.push((async () => {
+                                const term = `%${intent.query}%`;
+                                const { data: keywordData } = await supabase
                                     .from('products')
                                     .select('*')
-                                    .eq('category', category.toLowerCase())
-                                    .limit(20); // Broad context
+                                    .or(`name.ilike.${term},description.ilike.${term}`) // Deep Search
+                                    .limit(10);
 
-                                catData?.forEach((p: ProductRecord) => boostScore(p, 10, 'category_context'));
+                                keywordData?.forEach((p: any, index: number) => {
+                                    addRankScore(p as ProductRecord, index + 1, 'keyword');
+                                });
                             })());
-                        }
 
-                        // 2. Execute All Signals
-                        await Promise.all(promises);
+                            await Promise.all(promises);
 
-                        // 3. Ranking & Refinement
-                        let results = Array.from(scoreMap.values());
+                            // 4. RANKING & METADATA
+                            const results = Array.from(scoreMap.values());
 
-                        // Apply Price Intent Multipliers (Soft filtering, not hard exclusion)
-                        if (price_intent) {
-                            results.forEach(item => {
-                                const price = item.product.price;
-                                if (price_intent === 'low' && price < 50000) item.score *= 1.2;
-                                if (price_intent === 'high' && price > 150000) item.score *= 1.2;
+                            // Apply Sorting Intent
+                            if (intent.sort === 'price_asc') {
+                                results.sort((a, b) => a.product.price - b.product.price);
+                            } else if (intent.sort === 'price_desc') {
+                                results.sort((a, b) => b.product.price - a.product.price);
+                            } else if (intent.sort === 'rating') {
+                                results.sort((a, b) => (b.product.rating || 0) - (a.product.rating || 0));
+                            } else {
+                                // Default RRF Score Sort
+                                results.sort((a, b) => b.score - a.score);
+                            }
+
+                            const finalProducts = results.slice(0, 6).map(r => {
+                                const p = r.product;
+                                // Normalize image field: Ensure 'image' property exists if 'images' array is present
+                                return {
+                                    ...p,
+                                    image: p.image || (Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : null)
+                                };
                             });
+
+                            if (finalProducts.length === 0) {
+                                console.log("[Search Engine] No results found.");
+                                // Return metadata even on failure so user knows what happened
+                                return {
+                                    products: [],
+                                    info: {
+                                        originalQuery: rawQuery,
+                                        correctedQuery: intent.query,
+                                        intent: intent.sort !== 'relevance' ? `Sort: ${intent.sort}` : undefined,
+                                        tags: intent.tags,
+                                        method: 'Hybrid RRF (Zero Results)',
+                                        reasoning: (intent as any).reasoning
+                                    }
+                                };
+                            }
+
+                            // Return rich object with metadata
+                            console.log(`[Search Engine] Returning ${finalProducts.length} products. Top method: ${results[0].methods.join('+')}`);
+                            return {
+                                products: finalProducts,
+                                info: {
+                                    originalQuery: rawQuery,
+                                    correctedQuery: intent.query,
+                                    intent: intent.sort !== 'relevance' ? `Sort: ${intent.sort}` : undefined,
+                                    tags: intent.tags,
+                                    method: 'Hybrid RRF',
+                                    reasoning: (intent as any).reasoning // Explain WHY
+                                }
+                            };
+
+                        } catch (error) {
+                            console.error("[Search Marketplace] Critical Error:", error);
+                            return "I encountered an error while searching for products. Please try again or specify your search.";
                         }
-
-                        // Sort by final score
-                        results.sort((a, b) => b.score - a.score);
-
-                        // Debug Log for Transparency
-                        console.log(`[Search Engine] Query: "${searchQuery}" | Candidates: ${results.length}`);
-                        if (results.length > 0) {
-                            console.log(`[Top Match] ${results[0].product.name} (Score: ${results[0].score}) [${results[0].signals.join(', ')}]`);
-                        }
-
-                        // 4. Final Selection or Intelligent Pivot
-                        const finalProducts = results.slice(0, 6).map(r => r.product);
-
-                        // If no products found, return helpful message
-                        if (finalProducts.length === 0) {
-                            console.log("[Tool Call] No products found for:", searchQuery);
-                            return `No products found matching "${searchQuery}". Try a broader search like "laptop", "phone", or browse by category.`;
-                        }
-
-                        console.log(`[Tool Call] Found ${finalProducts.length} products`);
-                        return finalProducts;
                     },
                 }),
                 compare_products: tool({
