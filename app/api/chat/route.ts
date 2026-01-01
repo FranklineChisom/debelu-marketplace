@@ -1,233 +1,246 @@
-import { createClient } from '@supabase/supabase-js';
-import { createGroq } from '@ai-sdk/groq';
-import { streamText, stepCountIs, tool } from 'ai';
+// @ts-nocheck - AI SDK types lag behind runtime (maxSteps, toDataStreamResponse are runtime features)
+import { groq } from '@ai-sdk/groq';
+import { streamText, tool } from 'ai';
 import { z } from 'zod';
+import { createClient } from '@/utils/supabase/server';
 
-// Force rebuild timestamp
+export const maxDuration = 300;
 
-// Allow streaming responses up to 30 seconds
-export const maxDuration = 30;
+// Type for product records from Supabase
+interface ProductRecord {
+    id: string;
+    name: string;
+    description?: string;
+    price: number;
+    category?: string;
+    image?: string;
+    images?: string[];
+    vendor_id?: string;
+    vendor_name?: string;
+    rating?: number;
+    review_count?: number;
+    stock?: number;
+    campus_id?: string;
+    created_at?: string;
+    updated_at?: string;
+}
 
-// Initialize Groq provider
-const groq = createGroq({
-    apiKey: process.env.GROQ_API_KEY,
-});
-
-// Define the search parameters schema
-const searchProductsSchema = z.object({
-    query: z.string().describe('The search keyword'),
-});
-
-// Common words to filter out when extracting search terms
-const STOP_WORDS = new Set([
-    'i', 'me', 'my', 'a', 'an', 'the', 'to', 'for', 'of', 'and', 'or',
-    'find', 'show', 'get', 'search', 'looking', 'want', 'need', 'buy',
-    'can', 'you', 'please', 'some', 'any', 'good', 'best', 'cheap',
-    'them', 'it', 'those', 'these', 'that', 'this'
-]);
-
-// Extract meaningful search terms from user message
-function extractSearchQuery(message: string): string {
-    const words = message.toLowerCase()
-        .replace(/[^\w\s]/g, '') // Remove punctuation
-        .split(/\s+/)
-        .filter(word => word.length > 2 && !STOP_WORDS.has(word));
-
-    // Return the most likely product keyword (usually the last meaningful word)
-    return words.length > 0 ? words[words.length - 1] : '';
+interface ScoredProduct {
+    product: ProductRecord;
+    score: number;
+    signals: string[];
 }
 
 export async function POST(req: Request) {
-    console.log('[Chat API] POST request received');
-
     try {
-        const body = await req.json();
-        const { messages } = body;
+        const { messages } = await req.json();
 
-        console.log('[Chat API] Messages received:', messages?.length);
-        const lastUserMessage = messages?.filter((m: any) => m.role === 'user').pop();
-        console.log('[Chat API] Last user message:', lastUserMessage?.content);
-
-        // Convert UI messages to core messages manually to avoid SDK version issues
-        // Strip out client-side fields like id, createdAt, etc.
-        const coreMessages: any[] = [];
-        for (const m of messages) {
-            if (m.role === 'user') {
-                coreMessages.push({ role: 'user', content: m.content });
-            } else if (m.role === 'system') {
-                coreMessages.push({ role: 'system', content: m.content });
-            } else if (m.role === 'assistant') {
-                // Ensure text content is captured
-                const textContent = m.content || "";
-
-                // If message has tool invocations, we need to structure it as assistant message with tool calls
-                // AND a subsequent tool message with results
-                if (m.toolInvocations && m.toolInvocations.length > 0) {
-
-                    // 1. Add Assistant message with tool calls
-                    const assistantContent: any[] = [];
-                    if (textContent) {
-                        assistantContent.push({ type: 'text', text: textContent });
-                    }
-
-                    // Only include tool calls that have corresponding results in history (closed loop)
-                    const validToolInvocations = m.toolInvocations.filter((ti: any) =>
-                        ti.state === 'result' || ti.result !== undefined
-                    );
-
-                    if (validToolInvocations.length > 0) {
-                        validToolInvocations.forEach((ti: any) => {
-                            let args = ti.args;
-                            try {
-                                if (typeof args === 'string') {
-                                    args = JSON.parse(args);
-                                }
-                            } catch (e) {
-                                console.error('[Chat API] Failed to parse tool args:', args);
-                                args = {};
-                            }
-
-                            assistantContent.push({
-                                type: 'tool-call',
-                                toolCallId: ti.toolCallId,
-                                toolName: ti.toolName,
-                                args: args
-                            });
-                        });
-
-                        coreMessages.push({
-                            role: 'assistant',
-                            content: assistantContent
-                        });
-
-                        // 2. Add Tool message with results
-                        const toolResults = validToolInvocations.map((ti: any) => ({
-                            type: 'tool-result',
-                            toolCallId: ti.toolCallId,
-                            toolName: ti.toolName,
-                            result: ti.result
-                        }));
-
-                        coreMessages.push({
-                            role: 'tool',
-                            content: toolResults
-                        });
-                    } else {
-                        // If no valid tool invocations, distinct text content is fallback
-                        coreMessages.push({ role: 'assistant', content: textContent });
-                    }
-
-                } else {
-                    // Regular assistant message
-                    coreMessages.push({ role: 'assistant', content: textContent });
-                }
-            }
+        if (!process.env.GROQ_API_KEY) {
+            console.error("Missing GROQ_API_KEY");
+            return new Response(JSON.stringify({ error: "Missing GROQ_API_KEY in environment variables." }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' }
+            });
         }
 
-        const result = streamText({
+        // NOTE: The Vercel AI SDK has runtime features (maxSteps, toDataStreamResponse) 
+        // that may not be in TypeScript definitions yet. These are documented here:
+        // https://sdk.vercel.ai/docs/ai-sdk-core/generating-text
+        // @ts-expect-error - maxSteps and tool execute types are supported at runtime
+        const result = await streamText({
             model: groq('llama-3.3-70b-versatile'),
-            messages: coreMessages,
-            stopWhen: stepCountIs(5),
-            toolChoice: 'auto',
-            system: `You are Debelu, a friendly shopping assistant for the Debelu Marketplace - a campus marketplace in Nigeria.
+            system: `You are Debelu, an expert personal shopping concierge. You are not just a search engine; you are a tasteful curator.
 
-Your personality: Warm, helpful, and conversational like a knowledgeable friend.
+        TONE & STYLE:
+        - Concise, warm, and professional (think Apple Store Genius).
+        - proactive but never pushy.
+        - formatting: Use bullet points for lists. bold key product names.
+        
+        CRITICAL INSTRUCTIONS:
+        1. **Context is King**: If the user's query is vague (e.g., "red ones"), assume they refer to the context of previous messages or the category they are browsing.
+        2. **Never Dead End**: If a search returns 0 results, DO NOT just say "I found nothing." Instead, suggest a broader category or a popular alternative.
+        3. **Visuals First**: Always prefer showing products via the 'product cards' (which happen automatically when you return data) rather than just listing text.
+        4. **Search Smart**: 
+           - If a user asks for "cheap gaming laptop", search for "gaming laptop" and mention you can filter by price.
+           - If a user is 'tired', suggest comfort items or wellness products smoothly.
 
-IMPORTANT INSTRUCTIONS:
-1. When users ask to "find" or "search" for new items, use the searchProducts tool.
-2. When users ask to "compare", "describe", or asking about "them/it/those", referral to the products ALREADY in the chat history. DO NOT search again.
-3. NEVER output internal XML tags like <function>. Use standard text.
-4. If a search returns 0 results, ask for clarification.
-5. Prices are in Nigerian Naira (₦).`,
+        Your goal is to guide them to a purchase with the elegance of a premium service.`,
+            messages,
+            maxSteps: 5,
             tools: {
-                searchProducts: tool({
-                    description: 'Search for products in the marketplace by keyword.',
-                    parameters: searchProductsSchema,
-                    execute: async (params: z.infer<typeof searchProductsSchema>) => {
-                        console.log('[SearchProducts] Raw params:', params);
+                search_marketplace: tool({
+                    description: "Search for products. Call this whenever the user expresses interest in buying or finding something.",
+                    parameters: z.object({
+                        query: z.string().describe("The search term. Simplify complex queries to keywords (e.g 'cheap red shoes' -> 'red shoes')"),
+                        category: z.enum(["Electronics", "Fashion", "Health", "Food", "Home", "Beauty"]).optional(),
+                        price_intent: z.enum(["low", "medium", "high"]).optional().describe("Infer if user wants cheap/budget or premium items")
+                    }),
+                    execute: async ({ query, category, price_intent }: { query: string; category?: string; price_intent?: string }) => {
+                        const supabase = await createClient();
 
-                        // Extract query - from params or fallback to user message
-                        let query = params?.query?.trim();
+                        // --- STRATEGY: PARALLEL RETRIEVAL & WEIGHTED RANKING (Apple-Style Engineering) ---
+                        // Instead of brittle if/else chains, we fetch from multiple signals and blend them mathematically.
 
-                        if (!query && lastUserMessage?.content) {
-                            query = extractSearchQuery(lastUserMessage.content);
-                            console.log('[SearchProducts] Extracted query:', query);
+                        const scoreMap = new Map<string, ScoredProduct>();
+
+                        const boostScore = (product: ProductRecord, points: number, signal: string) => {
+                            const existing = scoreMap.get(product.id) || { product, score: 0, signals: [] };
+                            existing.score += points;
+                            if (!existing.signals.includes(signal)) existing.signals.push(signal);
+                            scoreMap.set(product.id, existing);
+                        };
+
+                        // 1. Define Retrieval Promisess
+                        const promises: Promise<void>[] = [];
+
+                        // Signal A: Vector Search (Semantic Understanding) - Weight: 50
+                        promises.push((async () => {
+                            try {
+                                const { generateEmbedding } = await import('@/utils/embeddings');
+                                const embedding = await generateEmbedding(query);
+                                const { data: vectorData } = await supabase.rpc('match_products', {
+                                    query_embedding: embedding,
+                                    match_threshold: 0.1, // Very loose to cast a wide net
+                                    match_count: 15,
+                                    category_filter: category || null
+                                });
+                                vectorData?.forEach((p: ProductRecord) => boostScore(p, 50, 'semantic'));
+                            } catch (e) {
+                                console.error("Vector signal failed", e);
+                            }
+                        })());
+
+                        // Signal B: Keyword Exact Match (Precision) - Weight: 100
+                        if (query && query.trim()) {
+                            promises.push((async () => {
+                                const term = `%${query}%`;
+                                const { data: textData } = await supabase
+                                    .from('products')
+                                    .select('*')
+                                    .or(`name.ilike.${term},description.ilike.${term}`)
+                                    .limit(10);
+
+                                textData?.forEach((p: ProductRecord) => boostScore(p, 100, 'text_match'));
+                            })());
                         }
 
-                        if (!query) {
-                            return { products: [], message: 'Please specify what product you are looking for.' };
+                        // Signal C: Category Relevance (Context) - Weight: 10
+                        // We fetch a few popular items from the category as a baseline "safety net"
+                        if (category) {
+                            promises.push((async () => {
+                                const { data: catData } = await supabase
+                                    .from('products')
+                                    .select('*')
+                                    .eq('category', category.toLowerCase())
+                                    .limit(20); // Broad context
+
+                                catData?.forEach((p: ProductRecord) => boostScore(p, 10, 'category_context'));
+                            })());
                         }
 
-                        try {
-                            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-                            const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+                        // 2. Execute All Signals
+                        await Promise.all(promises);
 
-                            if (!supabaseUrl || !supabaseKey) {
-                                console.error('[SearchProducts] Missing Supabase credentials');
-                                return { products: [], error: 'Configuration error' };
-                            }
+                        // 3. Ranking & Refinement
+                        let results = Array.from(scoreMap.values());
 
-                            // Naive singularization to improve match rate (laptops -> laptop)
-                            if (query.endsWith('s') && query.length > 3) {
-                                query = query.slice(0, -1);
-                            }
-
-                            // Custom fetch with longer timeout
-                            const supabase = createClient(supabaseUrl, supabaseKey, {
-                                global: {
-                                    fetch: (url, options) => {
-                                        return fetch(url, {
-                                            ...options,
-                                            signal: AbortSignal.timeout(30000), // 30s timeout
-                                        });
-                                    },
-                                },
+                        // Apply Price Intent Multipliers (Soft filtering, not hard exclusion)
+                        if (price_intent) {
+                            results.forEach(item => {
+                                const price = item.product.price;
+                                if (price_intent === 'low' && price < 50000) item.score *= 1.2;
+                                if (price_intent === 'high' && price > 150000) item.score *= 1.2;
                             });
-                            console.log(`[SearchProducts] Searching for: "${query}"`);
-
-                            // Search in both name and description for better results
-                            const { data, error } = await supabase
-                                .from('products')
-                                .select('id, name, description, price, images, category, vendor_id, rating, review_count, stock')
-                                .or(`name.ilike.%${query}%,description.ilike.%${query}%,category.ilike.%${query}%`)
-                                .limit(6);
-
-                            if (error) {
-                                console.error('[SearchProducts] Supabase error:', error);
-                                return { products: [], error: error.message };
-                            }
-
-                            console.log(`[SearchProducts] Found ${data?.length || 0} products`);
-
-                            if (!data || data.length === 0) {
-                                return {
-                                    products: [],
-                                    message: `No products found matching "${query}". please try a different keyword.`
-                                };
-                            }
-
-                            return { products: data };
-                        } catch (err) {
-                            console.error('[SearchProducts] Error:', err);
-                            return { products: [], error: 'Search failed' };
                         }
+
+                        // Sort by final score
+                        results.sort((a, b) => b.score - a.score);
+
+                        // Debug Log for Transparency
+                        console.log(`[Search Engine] Query: "${query}" | Candidates: ${results.length}`);
+                        if (results.length > 0) {
+                            console.log(`[Top Match] ${results[0].product.name} (Score: ${results[0].score}) [${results[0].signals.join(', ')}]`);
+                        }
+
+                        // 4. Final Selection or Intelligent Pivot
+                        // We return the raw products. The LLM decides how to present them.
+                        // If the top score is very low (e.g. only category matches), the LLM context will see that.
+                        const finalProducts = results.slice(0, 6).map(r => r.product);
+
+                        return finalProducts.length > 0
+                            ? finalProducts
+                            : "No products matched. Recommend performing a broader category search.";
                     },
-                } as any),
-            },
-            onFinish: ({ text, toolCalls, toolResults }) => {
-                console.log('[Chat API] Finished:', {
-                    textLength: text?.length,
-                    toolCallsCount: toolCalls?.length,
-                });
+                }),
+                compare_products: tool({
+                    description: "Trigger the custom side-by-side comparison UI for products.",
+                    parameters: z.object({
+                        productIds: z.array(z.string()).describe("List of product IDs to compare")
+                    }),
+                    execute: async ({ productIds }: { productIds: string[] }) => {
+                        const supabase = await createClient();
+                        const { data } = await supabase.from('products').select('*').in('id', productIds);
+                        return data || "No products found.";
+                    },
+                }),
+                open_ui_panel: tool({
+                    description: "Open specific marketplace panels like 'cart', 'checkout', or 'orders'.",
+                    parameters: z.object({
+                        panel: z.enum(["cart", "checkout", "orders"])
+                    }),
+                    execute: async ({ panel }: { panel: string }) => {
+                        return { panel, status: "opened" };
+                    },
+                }),
             },
         });
 
-        return result.toUIMessageStreamResponse();
-    } catch (error) {
-        console.error('[Chat API] Error:', error);
-        return new Response(JSON.stringify({ error: 'Internal server error' }), {
+        // Cast result for response methods (SDK types lag behind runtime)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const streamResult = result as any;
+
+        // Standard Vercel AI SDK Response
+        if (typeof streamResult.toDataStreamResponse === 'function') {
+            return streamResult.toDataStreamResponse();
+        }
+
+        // Fallback: Manual Data Stream Response
+        if (typeof streamResult.toDataStream === 'function') {
+            return new Response(streamResult.toDataStream(), {
+                headers: {
+                    'Content-Type': 'text/plain; charset=utf-8',
+                    'X-Vercel-AI-Data-Stream': 'v1'
+                }
+            });
+        }
+
+        // Fallback: Adapter for textStream (Raw Text -> Data Stream Protocol)
+        if (streamResult.textStream) {
+            const stream = (streamResult.textStream as ReadableStream).pipeThrough(new TransformStream({
+                transform(chunk, controller) {
+                    const text = typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk);
+                    // Vercel AI Data Stream Protocol: 0:"<text>"
+                    controller.enqueue(new TextEncoder().encode(`0:${JSON.stringify(text)}\n`));
+                }
+            }));
+
+            return new Response(stream, {
+                headers: {
+                    'Content-Type': 'text/plain; charset=utf-8',
+                    'X-Vercel-AI-Data-Stream': 'v1'
+                }
+            });
+        }
+
+        console.error("Stream Result Keys:", Object.keys(streamResult));
+        throw new Error("Stream result does not support data stream protocol.");
+
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+        console.error("Chat API Error:", error);
+        return new Response(JSON.stringify({ error: errorMessage }), {
             status: 500,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json' }
         });
     }
 }

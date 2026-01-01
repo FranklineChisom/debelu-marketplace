@@ -1,173 +1,110 @@
 "use client";
 
-import { useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import React, { useEffect, useRef } from "react";
+import { useChatStore } from "@/stores/chat-store";
 import { MessageBubble } from "./message-bubble";
+import { ChatInput } from "./chat-input";
 import { TypingIndicator } from "./typing-indicator";
 import { WelcomeState } from "./welcome-state";
-import { ProductCardChat } from "./product-card-chat";
-import type { ChatMessage } from "@/types";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ProductDetailPanel } from "./product-detail-panel";
+import { ProductComparePanel } from "./product-compare-panel";
+import { CartPanel } from "./panels/cart-panel";
+import { CheckoutPanel } from "./panels/checkout-panel";
+import { OrderPanel } from "./panels/order-panel";
+import { ProductIntelligencePanel } from "./product-intelligence-panel";
+import { Message } from "@/types/chat";
+import { AnimatePresence, motion } from "framer-motion";
 
 interface ChatContainerProps {
-    messages: any[]; // AI SDK messages with toolInvocations
-    isLoading: boolean;
-    className?: string;
+    messages?: Message[];
+    onSend?: (message: string) => void;
+    isLoading?: boolean;
 }
 
-export function ChatContainer({ messages, isLoading, className }: ChatContainerProps) {
+export const ChatContainer = (props: ChatContainerProps) => {
+    const sessions = useChatStore((state) => state.sessions);
+    const currentSessionId = useChatStore((state) => state.currentSessionId);
+    const isTypingStore = useChatStore((state) => state.isTyping);
+    const activePanel = useChatStore((state) => state.activePanel);
+    const setActivePanel = useChatStore((state) => state.setActivePanel);
+    const getProductDetailData = useChatStore((state) => state.getProductDetailData);
+    const getCompareData = useChatStore((state) => state.getCompareData);
+
     const scrollRef = useRef<HTMLDivElement>(null);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Auto-scroll logic
+    // Combine loading states
+    const isTyping = props.isLoading || isTypingStore;
+
+    // Determine which messages to show: detailed props (streaming) or store session (history)
+    const sessionMessages = currentSessionId ? sessions.find((s) => s.id === currentSessionId)?.messages : [];
+    const displayMessages = props.messages || sessionMessages || [];
+
+    // Smooth Apple-style scrolling
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages, isLoading]);
-
-    if (messages.length === 0 && !isLoading) {
-        return (
-            <div className={cn("flex-1 flex flex-col overflow-hidden", className)}>
-                <ScrollArea className="flex-1">
-                    <div className="max-w-3xl mx-auto px-4 py-4">
-                        <WelcomeState />
-                    </div>
-                </ScrollArea>
-            </div>
-        );
-    }
-
-    // Helper to transform AI SDK message/tools to UI ChatMessage
-    const transformMessage = (msg: any): ChatMessage => {
-        // Debug logging
-        console.log("Transforming message:", { role: msg.role, content: msg.content, parts: msg.parts?.length, type: msg.type });
-
-        // Base message
-        let content = msg.content;
-
-        // v6 fix: If content is empty but we have text parts, concatenate them
-        if (!content && msg.parts) {
-            content = msg.parts
-                .filter((p: any) => p.type === 'text')
-                .map((p: any) => p.text)
-                .join('');
-        }
-
-        const transformed: ChatMessage = {
-            id: msg.id,
-            role: msg.role,
-            type: "text",
-            content: content,
-            timestamp: msg.createdAt?.toString() || new Date().toISOString(),
-        };
-
-        // Extract tools (v6 parts or v5 toolInvocations)
-        const partsTools = msg.parts?.filter((p: any) =>
-            p.type?.startsWith('tool-') || p.type === 'tool-invocation'
-        ) || [];
-        const invocationsTools = msg.toolInvocations || [];
-        const toolParts = [...partsTools, ...invocationsTools];
-
-        // Check for product search results
-        const searchTool = toolParts.find((t: any) => {
-            const name = t.type?.replace('tool-', '') || t.toolName;
-            return name === 'searchProducts' && (t.output || t.result);
-        });
-
-        if (searchTool) {
-            const rawResult = searchTool.output || searchTool.result;
-            const products = Array.isArray(rawResult) ? rawResult : (rawResult?.products || []);
-
-            if (products.length > 0) {
-                transformed.type = "products";
-                transformed.products = products;
-
-                // Add Quick Actions
-                transformed.quickActions = [
-                    { id: 'view', label: 'View Details', action: 'view_detail', variant: 'secondary' },
-                ];
-
-                if (products.length > 1) {
-                    transformed.quickActions.push({
-                        id: 'compare',
-                        label: 'Compare Products',
-                        action: 'compare',
-                        icon: 'ArrowRightLeft',
-                        variant: 'outline'
-                    });
-                }
+        if (scrollRef.current) {
+            const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+            if (viewport) {
+                viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
             }
         }
+    }, [displayMessages, isTyping]);
 
-        // Check for add to cart tool
-        const cartTool = toolParts.find((t: any) => {
-            const name = t.type?.replace('tool-', '') || t.toolName;
-            return name === 'addToCart' && (t.output || t.result);
-        });
+    // Note: Tool side-effects (panel opening) are now handled directly in useChatStream hook
+    // This keeps the component focused on rendering only
 
-        if (cartTool) {
-            // We could show a specific "Added to Cart" bubble type if MessageBubble supports it,
-            // or just rely on the text response "I've added X to your cart"
-            // For now, let's keep it simple or check if MessageBubble has a cart type we want to switch to.
-            // Looking at MessageBubble, it has type="cart" for CartSummaryBubble vs just text.
-            // Let's assume the assistant text covers it, effectively.
+    const handleSendMessage = async (content: string) => {
+        if (!content.trim()) return;
+
+        if (props.onSend) {
+            props.onSend(content);
+        } else {
+            console.warn("ChatContainer used without onSend prop - streaming disabled.");
         }
-
-        return transformed;
     };
 
     return (
-        <div className={cn("flex-1 flex flex-col overflow-hidden min-h-0", className)}>
-            <ScrollArea className="flex-1" ref={scrollRef}>
-                <div className="max-w-3xl mx-auto px-4 py-4 space-y-6">
-                    <AnimatePresence mode="popLayout">
-                        {messages.map((message) => {
-                            const isUser = message.role === "user";
-                            const transformedMessage = transformMessage(message);
-
-                            return (
-                                <motion.div
-                                    key={message.id}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -10 }}
-                                    transition={{ duration: 0.2 }}
-                                    className={cn(
-                                        "flex w-full",
-                                        isUser ? "justify-end" : "justify-start"
-                                    )}
-                                >
-                                    {/* Use MessageBubble for everyone */}
-                                    <MessageBubble message={transformedMessage} />
-                                </motion.div>
-                            );
-                        })}
-
-                        {isLoading && messages.length > 0 && (() => {
-                            const lastMessage = messages[messages.length - 1];
-                            const showThinking = lastMessage?.role === 'user' ||
-                                (lastMessage?.role === 'assistant' && !lastMessage?.content && !lastMessage?.parts?.some((p: any) => p.type?.startsWith('tool-')));
-
-                            if (!showThinking) return null;
-
-                            return (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0 }}
-                                >
-                                    <TypingIndicator message="Thinking..." />
-                                </motion.div>
-                            );
-                        })()}
-                    </AnimatePresence>
-                    <div ref={messagesEndRef} />
+        <div className="flex h-full w-full overflow-hidden bg-background">
+            <div className={`flex flex-col flex-1 min-w-0 transition-all duration-500 ease-in-out ${activePanel !== 'none' ? 'hidden md:flex' : 'flex'}`}>
+                <ScrollArea ref={scrollRef} className="flex-1 px-4 lg:px-8">
+                    {displayMessages.length === 0 ? (
+                        <WelcomeState onAction={handleSendMessage} />
+                    ) : (
+                        <div className="space-y-8 max-w-4xl mx-auto py-10 pb-32">
+                            {displayMessages.map((msg) => (
+                                <MessageBubble key={msg.id} message={msg} />
+                            ))}
+                            {isTyping && <TypingIndicator />}
+                        </div>
+                    )}
+                </ScrollArea>
+                <div className="p-6 border-t bg-background/80 backdrop-blur-xl sticky bottom-0">
+                    <ChatInput onSend={handleSendMessage} disabled={isTyping} />
                 </div>
-            </ScrollArea>
+            </div>
+
+            <AnimatePresence>
+                {activePanel !== 'none' && (
+                    <motion.div
+                        initial={{ x: '100%' }}
+                        animate={{ x: 0 }}
+                        exit={{ x: '100%' }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                        className="w-full md:w-[450px] lg:w-[550px] border-l bg-card shadow-2xl z-50 overflow-y-auto"
+                    >
+                        <div className="p-4 border-b flex items-center justify-between sticky top-0 bg-card/80 backdrop-blur-md z-10">
+                            <h3 className="font-bold capitalize">{activePanel.replace('-', ' ')}</h3>
+                            <button onClick={() => setActivePanel('none')} className="p-2 hover:bg-muted rounded-full">✕</button>
+                        </div>
+                        {activePanel === 'product-detail' && <ProductDetailPanel product={getProductDetailData()?.product} onClose={() => setActivePanel('none')} />}
+                        {activePanel === 'compare' && <ProductComparePanel products={getCompareData()?.products || []} onClose={() => setActivePanel('none')} />}
+                        {activePanel === 'intelligence' && <ProductIntelligencePanel />}
+                        {activePanel === 'cart' && <CartPanel />}
+                        {activePanel === 'checkout' && <CheckoutPanel />}
+                        {activePanel === 'orders' && <OrderPanel />}
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
-}
-
-// Default export for backwards compatibility
-export default ChatContainer;
+};

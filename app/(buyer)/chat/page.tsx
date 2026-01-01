@@ -43,154 +43,59 @@ import { OrderPanel } from "@/components/chat/panels/order-panel";
 import { DeliveryMap } from "@/components/chat/delivery-map";
 import { useChatStore, useCartStore } from "@/stores";
 import { useMarketplaceStore } from "@/stores/useMarketplaceStore";
-
+import { ChatInterface } from "@/components/chat/chat-interface";
 import { useChat } from '@ai-sdk/react';
 
 // ... other imports
 
+// ... imports
+
 export default function ChatPage() {
-    const isSidebarOpen = useChatStore((state) => state.isSidebarOpen);
-    const toggleSidebar = useChatStore((state) => state.toggleSidebar);
-    const startNewSession = useChatStore((state) => state.startNewSession);
-    const activePanel = useChatStore((state) => state.activePanel);
-    const history = useChatStore((state) => state.history);
+    const sessions = useChatStore((state) => state.sessions);
+    const currentSessionId = useChatStore((state) => state.currentSessionId);
+    const setCurrentSession = useChatStore((state) => state.setCurrentSession);
 
+    // Local UI state
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
-    const [chatInput, setChatInput] = useState(""); // Local input state
-    const [showDebug, setShowDebug] = useState(false); // Debug panel toggle (enable for troubleshooting)
-    const [lastError, setLastError] = useState<string | null>(null);
 
-    // Initialize Vercel AI SDK useChat hook with proper configuration
-    const chatHelpers = useChat({
-        api: '/api/chat',
-        maxSteps: 5, // Enable multi-step tool execution (client handles tool loop)
-        onError: (error: Error) => {
-            console.error('[useChat] Error:', error);
-            setLastError(error.message);
-        },
-        onFinish: (message: any) => {
-            console.log('[useChat] Finished:', message);
-        },
-    } as any);
-
-    // Destructure with fallbacks for v5/v6 compatibility
-    const { messages, status, setMessages, error: chatError } = chatHelpers;
-    const append = (chatHelpers as any).append || (chatHelpers as any).sendMessage;
-    const aiIsLoading = (chatHelpers as any).isLoading;
-
-    // Derive isLoading from status for component compatibility
-    const isLoading = aiIsLoading || status === 'streaming' || status === 'submitted';
-
-    // Debug info object - captures all relevant state
-    const debugInfo = {
-        timestamp: new Date().toISOString(),
-        status,
-        isLoading,
-        aiIsLoading,
-        messageCount: messages?.length || 0,
-        lastError: lastError || chatError?.message || null,
-        hasAppend: !!append,
-        messages: messages?.map((m: any) => ({
-            id: m.id,
-            role: m.role,
-            contentLength: m.content?.length || 0,
-            hasToolInvocations: !!(m.toolInvocations?.length),
-            toolInvocations: m.toolInvocations?.map((t: any) => ({
-                toolName: t.toolName,
-                toolCallId: t.toolCallId,
-                hasResult: 'result' in t,
-                resultPreview: 'result' in t ? JSON.stringify(t.result).slice(0, 100) : null,
-            })),
-        })),
-    };
-
-    // Log state changes
-    useEffect(() => {
-        console.log('[Chat Debug]', debugInfo);
-    }, [status, messages?.length, isLoading]);
-
-    // Handle input change - use local state for controlled input
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setChatInput(e.target.value);
-    };
-
-    // Handle submit using append
-    const handleSubmit = async (e?: { preventDefault?: () => void }) => {
-        e?.preventDefault?.();
-        if (!chatInput.trim() || isLoading) return;
-        const message = chatInput;
-        setChatInput(""); // Clear input immediately for better UX
-        setLastError(null); // Clear previous errors
-        try {
-            console.log('[Chat] Sending message:', message);
-            await append({ role: 'user', content: message });
-        } catch (err: any) {
-            console.error('[Chat] Submit error:', err);
-            setLastError(err.message);
-        }
-    };
-
-
-    const processedToolIds = useRef<Set<string>>(new Set());
-
-    // Handle Client-Side Tool Effects
-    useEffect(() => {
-        if (!messages.length) return;
-
-        const lastMessage = messages[messages.length - 1] as any;
-        const toolInvocations = lastMessage.toolInvocations || lastMessage.parts?.filter((p: any) => p.type === 'tool-invocation') || [];
-        if (lastMessage.role !== 'assistant' || !toolInvocations.length) return;
-
-        toolInvocations.forEach((toolInvocation: any) => {
-            if (processedToolIds.current.has(toolInvocation.toolCallId)) return;
-
-            // Handle "addToCart"
-            if (toolInvocation.toolName === 'addToCart' && 'result' in toolInvocation) {
-                processedToolIds.current.add(toolInvocation.toolCallId);
-                const { productId, quantity } = (toolInvocation.result as any);
-
-                // Get product from store and add to cart
-                const storeProducts = useMarketplaceStore.getState().products;
-                const product = storeProducts.find(p => p.id === productId);
-
-                if (product) {
-                    // Add to cart using cart store
-                    useCartStore.getState().addItem({
-                        id: product.id,
-                        name: product.name,
-                        price: product.price,
-                        compareAtPrice: product.compareAtPrice,
-                        image: product.images?.[0]?.url || "",
-                        vendorName: product.vendorId,
-                        rating: product.rating || 0,
-                        reviewCount: product.reviewCount || 0,
-                        stock: product.stock,
-                        campusId: product.campusId,
-                        vendorId: product.vendorId,
-                    }, quantity || 1);
-
-                    console.log("Added to cart:", product.name, quantity);
-                } else {
-                    console.warn("Product not found for addToCart:", productId);
-                }
-
-                // Open cart panel to show the added item
-                useChatStore.getState().openPanel('cart');
-            }
-        });
-    }, [messages]);
+    const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
     const handleNewChat = () => {
-        // Reload page or reset useChat (useChat doesn't have a direct reset, 
-        // usually window.location.reload() or manually setMessages([]))
-        // For now, we'll just reload to clear state or we can use setMessages([]) if we extract it.
-        // Actually, startNewSession is for the store. 
-        // We'll just reload for a fresh start with the AI for this demo.
-        window.location.reload();
+        const newId = crypto.randomUUID();
+        setCurrentSession(newId);
     };
 
-    // Group history by date
-    const groupedHistory = history.reduce((groups, item) => {
+    // Ensure we always have a session ID
+    useEffect(() => {
+        if (!currentSessionId) {
+            handleNewChat();
+        }
+    }, [currentSessionId]);
+
+    // Derived active session
+    const activeSession = sessions.find(s => s.id === currentSessionId);
+
+    // Sanitize messages for useChat (Strict whitelist to prevent hook crashes)
+    const initialMessages = (activeSession?.messages || []).map(m => ({
+        id: m.id || crypto.randomUUID(),
+        role: (m.role === 'user' || m.role === 'assistant' || m.role === 'system' ? m.role : 'user') as any,
+        content: m.content || '',
+        createdAt: m.timestamp ? new Date(m.timestamp) : new Date(),
+        // Only include toolInvocations if valid Array
+        toolInvocations: Array.isArray((m as any).toolInvocations) ? (m as any).toolInvocations : undefined
+    }));
+
+    // --- HISTORY LOGIC ---
+    const historyItems = sessions.map(s => ({
+        id: s.id,
+        title: s.title || "New Chat",
+        date: s.updatedAt ? new Date(s.updatedAt).toLocaleDateString() : "Just now",
+        preview: (s.messages[s.messages.length - 1]?.content || "").substring(0, 40) || "No messages",
+        originalDate: s.updatedAt || new Date()
+    })).sort((a, b) => new Date(b.originalDate).getTime() - new Date(a.originalDate).getTime());
+
+    const groupedHistory = historyItems.reduce((groups, item) => {
         const group = groups.find(g => g.date === item.date);
         if (group) {
             group.items.push(item);
@@ -198,9 +103,8 @@ export default function ChatPage() {
             groups.push({ date: item.date, items: [item] });
         }
         return groups;
-    }, [] as { date: string; items: typeof history }[]);
+    }, [] as { date: string; items: typeof historyItems }[]);
 
-    // Filter history based on search
     const filteredGroups = searchQuery
         ? groupedHistory.map(group => ({
             ...group,
@@ -213,17 +117,9 @@ export default function ChatPage() {
 
     const SidebarContent = () => (
         <div className="flex flex-col h-full">
-
-            {/* New Chat Button */}
-            <Button
-                onClick={handleNewChat}
-                className="w-full justify-center gap-2 h-11 rounded-xl bg-foreground text-background hover:bg-foreground/90 font-medium shadow-sm mb-4"
-            >
-                <Plus className="w-4 h-4" />
-                New Chat
+            <Button onClick={handleNewChat} className="w-full mb-4">
+                <Plus className="w-4 h-4 mr-2" /> New Chat
             </Button>
-
-            {/* Search */}
             <div className="relative mb-4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -232,255 +128,83 @@ export default function ChatPage() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="h-10 pl-9 pr-9 rounded-xl bg-muted/50 border-0 text-sm placeholder:text-muted-foreground/60"
                 />
-                {searchQuery && (
-                    <button
-                        onClick={() => setSearchQuery("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
-                )}
             </div>
 
-            {/* History List */}
             <ScrollArea className="flex-1">
-                <div className="px-0 space-y-4">
-                    {filteredGroups.length === 0 ? (
-                        <div className="text-center py-8">
-                            <MessageSquare className="w-8 h-8 mx-auto mb-2 text-muted-foreground/30" />
-                            <p className="text-xs text-muted-foreground">
-                                {searchQuery ? "No matching conversations" : "No conversations yet"}
-                            </p>
-                        </div>
-                    ) : (
-                        filteredGroups.map((group) => (
-                            <div key={group.date}>
-                                {/* Date Header */}
-                                <div className="flex items-center gap-2 px-2 py-1.5 sticky top-0 bg-background/80 backdrop-blur-sm z-10">
-                                    <Clock className="w-3 h-3 text-muted-foreground" />
-                                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                                        {group.date}
-                                    </span>
-                                </div>
-
-                                {/* Items */}
-                                <div className="space-y-1 mt-1">
-                                    {group.items.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            className="group flex items-center justify-between gap-2 pl-4 pr-2 py-3 rounded-xl hover:bg-accent/50 transition-all duration-200 cursor-pointer"
-                                        >
-                                            <div className="flex-1 min-w-0 pr-2">
-                                                <p className="text-[13px] font-medium truncate text-foreground/80 group-hover:text-foreground transition-colors">
-                                                    {item.title}
-                                                </p>
-                                                <p className="text-[11px] text-muted-foreground/70 truncate group-hover:text-muted-foreground transition-colors mt-0.5">
-                                                    {item.preview}
-                                                </p>
-                                            </div>
-
-                                            {/* Actions Dropdown */}
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <button
-                                                        className="w-7 h-7 rounded-full hover:bg-background/80 flex items-center justify-center text-muted-foreground/0 group-hover:text-muted-foreground transition-all duration-200 flex-shrink-0"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <MoreHorizontal className="w-4 h-4" />
-                                                    </button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="w-40 p-1">
-                                                    <DropdownMenuItem className="gap-2 text-xs rounded-lg py-2 cursor-pointer">
-                                                        <Edit3 className="w-3.5 h-3.5 opacity-70" />
-                                                        Rename
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem className="gap-2 text-xs text-destructive focus:text-destructive rounded-lg py-2 cursor-pointer">
-                                                        <Trash2 className="w-3.5 h-3.5 opacity-70" />
-                                                        Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                    ))}
-                                </div>
+                {filteredGroups.map(group => (
+                    <div key={group.date}>
+                        <h4 className="px-2 py-1 text-xs font-semibold text-muted-foreground">{group.date}</h4>
+                        {group.items.map(item => (
+                            <div
+                                key={item.id}
+                                onClick={() => setCurrentSession(item.id)}
+                                className={cn(
+                                    "p-2 rounded-lg cursor-pointer hover:bg-muted transition-colors",
+                                    currentSessionId === item.id && "bg-muted font-medium"
+                                )}
+                            >
+                                <div className="text-sm truncate">{item.title}</div>
+                                <div className="text-xs text-muted-foreground truncate">{item.preview}</div>
                             </div>
-
-                        ))
-                    )}
-                </div>
+                        ))}
+                    </div>
+                ))}
             </ScrollArea>
         </div>
     );
 
     return (
         <div className="flex h-full bg-background relative overflow-hidden">
-            {/* Sidebar - Desktop */}
             <motion.div
                 initial={false}
-                animate={{
-                    width: isSidebarOpen ? 300 : 0,
-                    opacity: isSidebarOpen ? 1 : 0
-                }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className={cn(
-                    "flex-shrink-0 border-r border-border/40 bg-background hidden md:flex flex-col relative",
-                    "overflow-hidden"
-                )}
+                animate={{ width: isSidebarOpen ? 300 : 0, opacity: isSidebarOpen ? 1 : 0 }}
+                className="hidden md:flex flex-col border-r bg-background overflow-hidden"
             >
-                <div className="p-4 h-full w-[300px]">
+                <div className="w-[300px] h-full p-4">
                     <SidebarContent />
                 </div>
             </motion.div>
 
-            {/* Split View Container */}
-            <div className="flex-1 flex min-w-0">
-
-                {/* Main Chat Area */}
-                <div className="flex-1 flex flex-col min-w-0 bg-muted/20 relative">
-                    {/* Header */}
-                    <div className="h-14 border-b border-border/40 flex items-center justify-between px-4 lg:px-6 bg-background/80 backdrop-blur-xl z-10 sticky top-0">
-                        <div className="flex items-center gap-2">
-                            {/* Mobile Sidebar Trigger */}
-                            <Sheet>
-                                <SheetTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="md:hidden -ml-2 text-muted-foreground hover:text-foreground">
-                                        <Menu className="w-5 h-5" />
-                                    </Button>
-                                </SheetTrigger>
-                                <SheetContent side="left" className="w-[300px] p-4 pt-10">
-                                    <SidebarContent />
-                                </SheetContent>
-                            </Sheet>
-
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => toggleSidebar()}
-                                    className="hidden md:flex -ml-2 text-muted-foreground hover:text-foreground"
-                                >
-                                    <Menu className="w-5 h-5" />
-                                </Button>
-                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                <h1 className="text-sm font-semibold">Debelu Assistant</h1>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* DEBUG PANEL - Copy this info to diagnose issues */}
-                    {showDebug && (
-                        <div className="m-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-xs font-mono">
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="font-bold text-yellow-800 dark:text-yellow-200">🐛 Debug Panel</span>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => {
-                                            navigator.clipboard.writeText(JSON.stringify(debugInfo, null, 2));
-                                            alert('Debug info copied to clipboard!');
-                                        }}
-                                        className="px-2 py-1 bg-yellow-200 dark:bg-yellow-800 rounded text-yellow-800 dark:text-yellow-200 hover:bg-yellow-300 dark:hover:bg-yellow-700"
-                                    >
-                                        📋 Copy Debug Info
-                                    </button>
-                                    <button
-                                        onClick={() => setShowDebug(false)}
-                                        className="px-2 py-1 bg-yellow-200 dark:bg-yellow-800 rounded text-yellow-800 dark:text-yellow-200 hover:bg-yellow-300 dark:hover:bg-yellow-700"
-                                    >
-                                        ✕ Hide
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="space-y-1 text-yellow-700 dark:text-yellow-300">
-                                <div><strong>Status:</strong> {status || 'undefined'}</div>
-                                <div><strong>isLoading:</strong> {String(isLoading)}</div>
-                                <div><strong>aiIsLoading:</strong> {String(aiIsLoading)}</div>
-                                <div><strong>Messages:</strong> {messages?.length || 0}</div>
-                                <div><strong>hasAppend:</strong> {String(!!append)}</div>
-                                {lastError && (
-                                    <div className="text-red-600 dark:text-red-400"><strong>Error:</strong> {lastError}</div>
-                                )}
-                                {messages?.length > 0 && (
-                                    <div className="mt-2 pt-2 border-t border-yellow-300 dark:border-yellow-700">
-                                        <strong>Last Message:</strong>
-                                        <pre className="mt-1 p-2 bg-yellow-100 dark:bg-yellow-900/50 rounded overflow-auto max-h-32">
-                                            {JSON.stringify({
-                                                ...messages[messages.length - 1],
-                                                content: messages[messages.length - 1]?.content?.slice(0, 200),
-                                            }, null, 2)}
-                                        </pre>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Messages */}
-                    <ChatContainer
-                        className="flex-1"
-                        messages={messages}
-                        isLoading={isLoading}
-                    />
-
-                    {/* Input Area */}
-                    <div className="p-4 lg:p-6 pt-2 z-10 bg-gradient-to-t from-background via-background to-transparent">
-                        <ChatInput
-                            input={chatInput}
-                            handleInputChange={handleInputChange}
-                            handleSubmit={handleSubmit}
-                            isLoading={isLoading}
-                        />
+            <div className="flex-1 flex flex-col min-w-0">
+                <div className="h-14 border-b flex items-center justify-between px-4">
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSidebarOpen(true)}>
+                            <Menu className="w-5 h-5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="hidden md:flex" onClick={toggleSidebar}>
+                            <Menu className="w-5 h-5" />
+                        </Button>
+                        <span className="font-semibold">Debelu Assistant</span>
                     </div>
                 </div>
 
-                {/* Right Side Panel (Desktop) */}
-                <AnimatePresence>
-                    {activePanel !== 'none' && (
-                        <motion.div
-                            initial={{ width: 0, opacity: 0 }}
-                            animate={{
-                                width: activePanel === 'compare' ? 700 : activePanel === 'cart' || activePanel === 'checkout' ? 450 : 400,
-                                opacity: 1
-                            }}
-                            exit={{ width: 0, opacity: 0 }}
-                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                            className="hidden lg:block border-l border-border/40 bg-background relative z-20 overflow-hidden"
-                        >
-                            <div className={cn("h-full",
-                                activePanel === 'compare' ? "w-[700px]" :
-                                    activePanel === 'cart' || activePanel === 'checkout' ? "w-[450px]" :
-                                        "w-[400px]"
-                            )}>
-                                {activePanel === 'product_detail' && <ProductIntelligencePanel />}
-                                {activePanel === 'compare' && <ProductComparePanel />}
-                                {activePanel === 'cart' && <CartPanel />}
-                                {activePanel === 'checkout' && <CheckoutPanel />}
-                                {activePanel === 'order_detail' && <OrderPanel />}
-                                {activePanel === 'tracking' && <DeliveryMap />}
-                            </div>
-                        </motion.div>
+                <div className="flex-1 overflow-hidden relative flex flex-col">
+                    {/* 
+                      KEY ARCHITECTURAL DECISION:
+                      We use the Session ID as a 'key'. This forces React to complete destroy and recreate 
+                      the ChatInterface when switching sessions. This ensures:
+                      1. No state bleeding between chats
+                      2. useChat hook is always initialized with the correct 'initialMessages'
+                      3. Zero race conditions
+                    */}
+                    {currentSessionId && (
+                        <ChatInterface
+                            key={currentSessionId}
+                            sessionId={currentSessionId}
+                            initialMessages={initialMessages as any} // Cast if types slightly mismatch (Message vs CoreMessage)
+                        />
                     )}
-                </AnimatePresence>
-
-                {/* Right Side Panel (Mobile Overlay) */}
-                <AnimatePresence>
-                    {activePanel !== 'none' && (
-                        <motion.div
-                            initial={{ y: "100%" }}
-                            animate={{ y: 0 }}
-                            exit={{ y: "100%" }}
-                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="lg:hidden fixed inset-0 z-50 bg-background flex flex-col"
-                        >
-                            {activePanel === 'product_detail' && <ProductIntelligencePanel />}
-                            {activePanel === 'compare' && <ProductComparePanel />}
-                            {activePanel === 'cart' && <CartPanel />}
-                            {activePanel === 'checkout' && <CheckoutPanel />}
-                            {activePanel === 'order_detail' && <OrderPanel />}
-                            {activePanel === 'tracking' && <DeliveryMap />}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                </div>
             </div>
+
+            {/* Mobile Sidebar */}
+            <Sheet open={isSidebarOpen && typeof window !== 'undefined' && window.innerWidth < 768} onOpenChange={setIsSidebarOpen}>
+                <SheetContent side="left" className="p-0 w-[300px]">
+                    <div className="h-full p-4">
+                        <SidebarContent />
+                    </div>
+                </SheetContent>
+            </Sheet>
         </div>
     );
 }

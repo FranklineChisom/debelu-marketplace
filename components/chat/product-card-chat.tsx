@@ -17,7 +17,8 @@ interface ProductCardChatProps {
 }
 
 export function ProductCardChat({ product, expanded = false, className }: ProductCardChatProps) {
-    const setSelectedProduct = useChatStore((state) => state.setSelectedProduct);
+    const setActivePanel = useChatStore((state) => state.setActivePanel);
+    const setPanelData = useChatStore((state) => state.setPanelData);
     const addItem = useCartStore((state) => state.addItem);
 
     // Safe image handling - handle both 'image' (single) and 'images' (array)
@@ -49,7 +50,8 @@ export function ProductCardChat({ product, expanded = false, className }: Produc
             campusId: product.campusId || product.campus_id,
             attributes: product.attributes || {},
         };
-        setSelectedProduct(productSummary);
+        setActivePanel('product-detail');
+        setPanelData({ type: 'product-detail', product: productSummary });
     };
 
     const handleAddToCart = (e: React.MouseEvent) => {

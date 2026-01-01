@@ -24,15 +24,20 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function ProductIntelligencePanel() {
-    const selectedProduct = useChatStore((state) => state.selectedProduct);
-    const setSelectedProduct = useChatStore((state) => state.setSelectedProduct);
+    const setActivePanel = useChatStore((state) => state.setActivePanel);
+    const getIntelligenceData = useChatStore((state) => state.getIntelligenceData);
     const addItem = useCartStore((state) => state.addItem);
+
+    // Use type-safe getter for panel data
+    const intelligenceData = getIntelligenceData();
+    const selectedProduct = intelligenceData?.products?.[0] ?? null;
 
     if (!selectedProduct) return null;
 
-    const handleClose = () => setSelectedProduct(null);
+    const handleClose = () => setActivePanel('none');
     const handleAddToCart = () => {
-        addItem(selectedProduct);
+        // Cast to cart item type
+        addItem(selectedProduct as Parameters<typeof addItem>[0]);
     };
 
     return (
@@ -65,7 +70,7 @@ export function ProductIntelligencePanel() {
                         {selectedProduct.image ? (
                             <Image
                                 src={selectedProduct.image}
-                                alt={selectedProduct.name}
+                                alt={selectedProduct.name || 'Product'}
                                 fill
                                 className="object-cover p-0 transition-transform duration-700 group-hover:scale-105"
                             />
@@ -90,7 +95,7 @@ export function ProductIntelligencePanel() {
                         <div>
                             <p className="text-sm text-muted-foreground font-medium mb-1">Price</p>
                             <div className="text-3xl font-black bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                                {formatNaira(selectedProduct.price)}
+                                {formatNaira(selectedProduct.price || 0)}
                             </div>
                         </div>
                         <div className="flex items-center gap-2 bg-yellow-500/10 px-3 py-1.5 rounded-full border border-yellow-500/20">

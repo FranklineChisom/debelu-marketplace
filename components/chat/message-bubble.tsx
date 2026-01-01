@@ -1,226 +1,146 @@
+"use client";
 
-import { useRouter } from "next/navigation";
-import { MessageSquare, Package, ShoppingCart, CheckCircle, FileText, Download } from "lucide-react";
-import { cn, formatNaira } from "@/lib/utils";
-import type { ChatMessage, ProductSummary } from "@/types";
-import { ProductCardChat } from "./product-card-chat";
-import { Badge } from "@/components/ui/badge";
-import { useChatStore } from "@/stores";
-import {
-    Carousel,
-    CarouselContent,
-    CarouselItem,
-    CarouselNext,
-    CarouselPrevious,
-} from "@/components/ui/carousel";
-
+import React, { useState } from "react";
+import { Message } from "@/types/chat";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
+import { Copy, Volume2, Check } from "lucide-react";
+import { DeliveryMap } from "./delivery-map";
+import { ToolRenderer } from "./tool-renderer";
+import { haptics } from "@/lib/haptics";
+import type { ToolInvocation } from "@/lib/chat/tools";
 
 interface MessageBubbleProps {
-    message: ChatMessage;
+    message: Message;
+    isLast?: boolean;
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
-    const router = useRouter();
-    const openPanel = useChatStore((state) => state.openPanel);
-    const setComparingProducts = useChatStore((state) => state.setComparingProducts);
-    const { role, type, content, products, product, order, quickActions } = message;
+/**
+ * Apple-Standard Message Bubble
+ * 
+ * Clean, minimal message component that delegates
+ * all tool rendering to the unified ToolRenderer.
+ */
+export const MessageBubble = ({ message, isLast }: MessageBubbleProps) => {
+    const isAssistant = message.role === "assistant";
+    const [isCopied, setIsCopied] = useState(false);
+    const [isSpeaking, setIsSpeaking] = useState(false);
 
-    // ... (system and user message checks remain the same)
+    const handleCopy = () => {
+        navigator.clipboard.writeText(message.content);
+        setIsCopied(true);
+        haptics.notification('success');
+        setTimeout(() => setIsCopied(false), 2000);
+    };
 
-    // User message
-    if (role === "user") {
-        return (
-            <div className="chat-bubble chat-bubble-user max-w-[85%]">
-                <p className="text-sm sm:text-base">{content}</p>
-            </div>
-        );
-    }
+    const handleSpeak = () => {
+        if (!('speechSynthesis' in window)) return;
+        if (isSpeaking) {
+            window.speechSynthesis.cancel();
+            setIsSpeaking(false);
+        } else {
+            const u = new SpeechSynthesisUtterance(message.content);
+            u.onend = () => setIsSpeaking(false);
+            setIsSpeaking(true);
+            window.speechSynthesis.speak(u);
+        }
+    };
 
-    // System message
-    if (role === "system") {
-        return (
-            <div className="text-center py-2">
-                <span className="text-xs text-muted-foreground">{content}</span>
-            </div>
-        );
-    }
+    // Cast toolInvocations to proper type
+    const toolInvocations = (message.toolInvocations || []) as ToolInvocation[];
 
-    // Assistant message - varies by type
     return (
-        <div className="flex gap-3 max-w-full">
+        <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{
+                type: "spring",
+                damping: 25,
+                stiffness: 300
+            }}
+            className={cn("flex w-full gap-4 group", !isAssistant && "flex-row-reverse")}
+            role="article"
+            aria-label={`${isAssistant ? 'Assistant' : 'You'} said`}
+        >
+            {/* Avatar */}
+            <Avatar className="w-9 h-9 border border-border/50 shadow-sm shrink-0">
+                <AvatarImage src={isAssistant ? "/images/bot-avatar.png" : "/images/user-avatar.png"} />
+                <AvatarFallback className="text-[10px] font-medium bg-muted text-muted-foreground">
+                    {isAssistant ? "DB" : "ME"}
+                </AvatarFallback>
+            </Avatar>
 
+            <div className={cn("flex flex-col max-w-[85%] lg:max-w-[70%] gap-2", !isAssistant && "items-end")}>
+                {/* Main Text Bubble */}
+                {message.content && (
+                    <div className={cn(
+                        "relative px-5 py-3.5 rounded-[22px] text-[15px] leading-relaxed shadow-sm transition-all",
+                        isAssistant
+                            ? "bg-card border border-border/40 text-card-foreground rounded-tl-none"
+                            : "bg-primary text-primary-foreground rounded-tr-none shadow-primary/20"
+                    )}>
+                        <div className="whitespace-pre-wrap">{message.content}</div>
 
-            {/* Message Content */}
-            <div className="pl-2 space-y-3 min-w-0 flex-1">
-                {/* Text content */}
-                {content && (
-                    <div className="chat-bubble chat-bubble-ai">
-                        <p className="text-sm sm:text-base">{content}</p>
-                    </div>
-                )}
-
-                {/* Products carousel */}
-                {type === "products" && products && products.length > 0 && (
-                    <div className="w-[85vw] md:w-[600px] lg:w-[700px] pr-8 pl-1">
-                        <Carousel
-                            opts={{
-                                align: "start",
-                            }}
-                            className="w-full"
-                        >
-                            <CarouselContent className="-ml-2">
-                                {products.map((product) => (
-                                    <CarouselItem key={product.id} className="pl-2 basis-[160px] sm:basis-[200px] lg:basis-1/3">
-                                        <ProductCardChat product={product} />
-                                    </CarouselItem>
-                                ))}
-                            </CarouselContent>
-                            <CarouselPrevious className="left-0 -translate-x-1/2 hidden sm:flex" />
-                            <CarouselNext className="right-0 translate-x-1/2 hidden sm:flex" />
-                        </Carousel>
-                    </div>
-                )}
-
-                {/* Single product detail */}
-                {type === "product-detail" && product && (
-                    <ProductCardChat product={product} expanded />
-                )}
-
-                {/* Cart summary */}
-                {type === "cart" && (
-                    <CartSummaryBubble />
-                )}
-
-                {/* Order confirmation */}
-                {type === "order-confirmation" && order && (
-                    <OrderConfirmationBubble order={order} />
-                )}
-
-                {/* Invoice */}
-                {type === "invoice" && (
-                    <InvoiceBubble order={order} />
-                )}
-
-                {/* Quick actions */}
-                {quickActions && quickActions.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                        {quickActions.map((action) => (
-                            <button
-                                key={action.id}
-                                className={cn(
-                                    "px-3 py-1.5 text-xs font-medium rounded-full border transition-colors",
-                                    action.variant === "default"
-                                        ? "bg-primary text-primary-foreground hover:bg-primary/90 border-transparent"
-                                        : "bg-background hover:bg-muted border-border"
-                                )}
-                                onClick={() => {
-                                    if (action.action === "compare" && products) {
-                                        setComparingProducts(products);
-                                    } else if (action.action === "checkout") {
-                                        openPanel('checkout');
-                                    } else if (action.action === "view_cart") {
-                                        openPanel('cart');
-                                    } else if (action.action === "track_order") {
-                                        openPanel('order_detail', { orderId: order?.id });
-                                    } else {
-                                        console.log("Action clicked:", action.label);
-                                    }
-                                }}
+                        {/* Assistant Quick Actions */}
+                        {isAssistant && (
+                            <div
+                                className="absolute -bottom-8 left-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300"
+                                role="toolbar"
+                                aria-label="Message actions"
                             >
-                                {action.label}
-                            </button>
-                        ))}
+                                <button
+                                    onClick={handleCopy}
+                                    className="p-1.5 hover:bg-muted rounded-md text-muted-foreground transition-colors"
+                                    aria-label={isCopied ? "Copied!" : "Copy message"}
+                                >
+                                    {isCopied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+                                </button>
+                                <button
+                                    onClick={handleSpeak}
+                                    className={cn("p-1.5 hover:bg-muted rounded-md transition-colors", isSpeaking ? "text-primary" : "text-muted-foreground")}
+                                    aria-label={isSpeaking ? "Stop speaking" : "Read aloud"}
+                                >
+                                    <Volume2 className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
-            </div>
-        </div>
-    );
-}
 
-function CartSummaryBubble() {
-    const openPanel = useChatStore((state) => state.openPanel);
-    return (
-        <div className="bg-background border rounded-2xl p-4 max-w-sm cursor-pointer hover:border-primary/50 transition-colors" onClick={() => openPanel('cart')}>
-            <div className="flex items-center gap-2 mb-3">
-                <ShoppingCart className="w-4 h-4" />
-                <span className="font-semibold text-sm">Your Cart</span>
-            </div>
-            <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                    <span className="text-muted-foreground">Dell Inspiron 15</span>
-                    <span>{formatNaira(165000)}</span>
-                </div>
-                <div className="flex justify-between">
-                    <span className="text-muted-foreground">USB-C Hub</span>
-                    <span>{formatNaira(12500)}</span>
-                </div>
-                <div className="border-t pt-2 mt-2">
-                    <div className="flex justify-between font-semibold">
-                        <span>Total</span>
-                        <span className="price">{formatNaira(177500)}</span>
-                    </div>
-                </div>
-            </div>
-            <div className="mt-3 text-xs text-center text-primary font-medium">
-                Click to view cart
-            </div>
-        </div>
-    );
-}
+                {/* Tool Results - Unified Renderer */}
+                <AnimatePresence>
+                    {toolInvocations.map(invocation => (
+                        <ToolRenderer
+                            key={invocation.toolCallId}
+                            invocation={invocation}
+                        />
+                    ))}
+                </AnimatePresence>
 
-function OrderConfirmationBubble({ order }: { order: any }) {
-    const openPanel = useChatStore((state) => state.openPanel);
-    return (
-        <div className="bg-background border rounded-2xl p-4 max-w-sm cursor-pointer hover:border-primary/50 transition-colors" onClick={() => openPanel('order_detail', { orderId: order?.id })}>
-            <div className="flex items-center gap-2 mb-3 text-success">
-                <CheckCircle className="w-5 h-5" />
-                <span className="font-semibold">Order Confirmed!</span>
-            </div>
-            <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                    <span className="text-muted-foreground">Order ID</span>
-                    <span className="font-mono text-xs">#{order?.orderNumber || "DBL-2024-1234"}</span>
-                </div>
-                <div className="flex justify-between">
-                    <span className="text-muted-foreground">Delivery</span>
-                    <span>Today, 2-4pm</span>
-                </div>
-                <Badge variant="success" className="mt-2 text-xs">
-                    Vendor notified
-                </Badge>
-            </div>
-            <div className="mt-3 text-xs text-center text-primary font-medium">
-                Click to track order
-            </div>
-        </div>
-    );
-}
+                {/* Delivery Map (Special Case) */}
+                <AnimatePresence>
+                    {message.content?.includes("ORDER_MAP") && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                            className="w-full mt-2"
+                        >
+                            <DeliveryMap className="rounded-2xl border shadow-sm overflow-hidden" />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
-function InvoiceBubble({ order }: { order: any }) {
-    return (
-        <div className="bg-background border rounded-2xl p-4 max-w-sm">
-            <div className="flex items-center gap-2 mb-3">
-                <FileText className="w-4 h-4 text-muted-foreground" />
-                <span className="font-semibold text-sm">Invoice Available</span>
+                {/* Timestamp */}
+                <span className="text-[10px] opacity-30 px-2 font-medium">
+                    {new Date(message.timestamp || ('createdAt' in message ? (message as { createdAt?: Date }).createdAt : undefined) || new Date()).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    })}
+                </span>
             </div>
-            <div className="space-y-2 text-sm mb-4">
-                <div className="flex justify-between">
-                    <span className="text-muted-foreground">Amount Paid</span>
-                    <span className="font-semibold">{formatNaira(order?.total || 178000)}</span>
-                </div>
-                <div className="flex justify-between">
-                    <span className="text-muted-foreground">Date</span>
-                    <span>{new Date().toLocaleDateString()}</span>
-                </div>
-                <div className="flex justify-between">
-                    <span className="text-muted-foreground">Payment Method</span>
-                    <span>Card ending 4242</span>
-                </div>
-            </div>
-            <button className="w-full flex items-center justify-center gap-2 py-2 bg-muted/50 hover:bg-muted text-foreground rounded-lg transition-colors text-xs font-medium border border-border/50">
-                <Download className="w-3.5 h-3.5" />
-                Download PDF
-            </button>
-        </div>
+        </motion.div>
     );
-}
+};

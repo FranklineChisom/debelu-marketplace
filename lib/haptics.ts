@@ -73,3 +73,8 @@ export function withHaptic<T extends (...args: unknown[]) => unknown>(
         return handler(...args);
     }) as T;
 }
+export const haptics = {
+    impact: (style: 'light' | 'medium' | 'heavy') => haptic(style),
+    notification: (type: 'success' | 'warning' | 'error') => haptic(type),
+    selection: () => haptic('selection'),
+};

@@ -127,15 +127,19 @@ export const useMarketplaceStore = create<MarketplaceState>()(
             },
 
             addProduct: async (product) => {
-                const supabase = createClient();
-                // Omit ID to let DB generate it, or use the one provided if UUID
-                const { error } = await supabase.from('products').insert(product);
-                if (error) {
-                    toast.error("Failed to add product");
+                // Use Server Action to allow automated server-side embeddings
+                const { createProductAction } = await import('@/app/actions/create-product');
+
+                const response = await createProductAction(product);
+
+                if (!response.success) {
+                    toast.error(response.error || "Failed to add product");
                     return;
                 }
-                set((state) => ({ products: [product, ...state.products] }));
-                toast.success("Product added");
+
+                // If successful, update local state with the returned data (which includes the new ID and embedding)
+                set((state) => ({ products: [response.data, ...state.products] }));
+                toast.success("Product added with AI Soul");
             },
 
             updateProduct: async (id, updates) => {

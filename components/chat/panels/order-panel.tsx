@@ -57,10 +57,12 @@ const statusConfig = {
 const statusOrder = ["pending", "confirmed", "processing", "delivering", "delivered"];
 
 export function OrderPanel() {
-    const activePanelData = useChatStore((state) => state.activePanelData);
+    const getOrderDetailData = useChatStore((state) => state.getOrderDetailData);
     const closePanel = useChatStore((state) => state.closePanel);
 
-    // In a real app, use activePanelData.orderId to fetch order
+    // Get order ID from panel data (for production: use to fetch from API)
+    const panelData = getOrderDetailData();
+    // For demo, use mockOrders - in production, fetch by panelData?.orderId
     const order = mockOrders[0];
     const currentStatusIndex = statusOrder.indexOf(order.status);
 

@@ -99,14 +99,14 @@ export function CheckoutPanel() {
         clearCart();
         setIsProcessing(false);
 
-        // Add confirmation to chat mock
-        addAssistantMessage("Your order has been placed successfully!", {
-            type: "order-confirmation",
-            order: newOrder
-        });
+        // Add confirmation to chat - use current session
+        const currentSessionId = useChatStore.getState().currentSessionId;
+        if (currentSessionId) {
+            addAssistantMessage(currentSessionId, `🎉 Your order #${newOrderNumber} has been placed successfully! We'll notify you when it's on the way.`);
+        }
 
         // Open Order Detail Panel
-        openPanel('order_detail', { orderId: newOrder.id }); // In a real app we would pass the full order object or fetch it
+        openPanel('order_detail', { type: 'order_detail', orderId: newOrder.id, order: newOrder });
     };
 
     return (

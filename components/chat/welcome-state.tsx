@@ -6,17 +6,18 @@ import { useChatStore, useUIStore } from "@/stores";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 import { Laptop, Package, Truck } from "lucide-react";
 
-export function WelcomeState() {
-    const addUserMessage = useChatStore((state) => state.addUserMessage);
-    const selectedCampus = useUIStore((state) => state.selectedCampus);
+interface WelcomeStateProps {
+    onAction: (message: string) => void;
+}
 
+export function WelcomeState({ onAction }: WelcomeStateProps) {
     const router = useRouter();
 
     const handleActionClick = (action: any) => {
         if (action.path) {
             router.push(action.path);
         } else {
-            addUserMessage(action.query);
+            onAction(action.query);
         }
     };
 
@@ -57,17 +58,7 @@ export function WelcomeState() {
                 ))}
             </motion.div>
 
-            <motion.div variants={fadeInUp} className="mt-12">
-                <button
-                    onClick={() => {
-                        useChatStore.getState().populateWithMockData();
-                        window.location.reload(); // Force reload to see changes immediately
-                    }}
-                    className="text-xs text-muted-foreground hover:text-primary transition-colors underline"
-                >
-                    Don't see any data? Start Demo Chat
-                </button>
-            </motion.div>
+            {/* Removed Legacy Demo Button */}
         </motion.div>
     );
 }

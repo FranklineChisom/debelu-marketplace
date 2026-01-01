@@ -8,21 +8,21 @@ import {
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { useChatStore } from "@/stores";
+
 import { formatNaira } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area"; // We can reuse ScrollArea or the div fix, let's use div for consistency
 
-export function ProductComparePanel() {
-    const comparingProducts = useChatStore((state) => state.comparingProducts);
-    const setComparingProducts = useChatStore((state) => state.setComparingProducts);
+interface ProductComparePanelProps {
+    products: any[]; // Using any[] to match usage or properly typed array
+    onClose: () => void;
+}
 
-    if (!comparingProducts || comparingProducts.length < 2) return null;
-
-    const handleClose = () => setComparingProducts(null);
+export function ProductComparePanel({ products, onClose }: ProductComparePanelProps) {
+    if (!products || products.length < 2) return null;
 
     // Dynamic attributes extraction
     const allAttributes = Array.from(
-        new Set(comparingProducts.flatMap(p => p.attributes ? Object.keys(p.attributes) : []))
+        new Set(products.flatMap(p => p.attributes ? Object.keys(p.attributes) : []))
     );
 
     const features = [
@@ -46,7 +46,7 @@ export function ProductComparePanel() {
             {/* Header */}
             <div className="h-14 flex items-center justify-between px-4 border-b border-border/40 bg-background/80 backdrop-blur-sm z-10 sticky top-0">
                 <h2 className="font-semibold text-sm text-foreground">Compare Products</h2>
-                <Button variant="ghost" size="icon" onClick={handleClose} className="text-muted-foreground hover:text-foreground hover:bg-destructive/10 hover:text-destructive">
+                <Button variant="ghost" size="icon" onClick={onClose} className="text-muted-foreground hover:text-foreground hover:bg-destructive/10 hover:text-destructive">
                     <X className="w-5 h-5" />
                 </Button>
             </div>
@@ -59,7 +59,7 @@ export function ProductComparePanel() {
                             <thead>
                                 <tr>
                                     <th className="p-4 bg-muted/20 sticky top-0 z-10 min-w-[100px]"></th>
-                                    {comparingProducts.map(product => (
+                                    {products.map(product => (
                                         <th key={product.id} className="p-4 bg-muted/20 sticky top-0 z-10 w-[150px] min-w-[150px] align-top">
                                             <div className="relative aspect-square rounded-lg overflow-hidden bg-background mb-2 border border-border/50">
                                                 {product.image && (
@@ -75,7 +75,7 @@ export function ProductComparePanel() {
                                 {features.map((feature, idx) => (
                                     <tr key={idx} className="group hover:bg-muted/10 transition-colors">
                                         <td className="p-3 text-xs font-semibold text-muted-foreground bg-muted/5 sticky left-0 z-10">{feature.label}</td>
-                                        {comparingProducts.map(product => (
+                                        {products.map(product => (
                                             <td key={product.id} className="p-3 text-sm border-l border-border/20">
                                                 {feature.render(product)}
                                             </td>

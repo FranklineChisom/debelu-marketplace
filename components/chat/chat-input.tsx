@@ -9,25 +9,25 @@ import { useChatStore } from "@/stores";
 import { toast } from "sonner";
 
 interface ChatInputProps {
-    input: string;
-    handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-    handleSubmit: (e: React.FormEvent) => void;
-    isLoading: boolean;
-    placeholder?: string;
+    onSend: (message: string) => void;
     disabled?: boolean;
+    placeholder?: string;
 }
 
 export function ChatInput({
-    input,
-    handleInputChange,
-    handleSubmit,
-    isLoading,
-    placeholder = "What are you looking for?",
+    onSend,
     disabled = false,
+    placeholder = "What are you looking for?",
 }: ChatInputProps) {
+    const [input, setInput] = useState("");
     const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const selectedProduct = useChatStore((state) => state.selectedProduct);
-    const setSelectedProduct = useChatStore((state) => state.setSelectedProduct);
+    const activePanel = useChatStore((state) => state.activePanel);
+    const panelData = useChatStore((state) => state.panelData);
+    const setActivePanel = useChatStore((state) => state.setActivePanel);
+
+    // Type the panelData for product context
+    interface ProductContext { name?: string }
+    const selectedProduct = activePanel === 'product-detail' ? (panelData as ProductContext) : null;
 
     // Auto-resize textarea
     useEffect(() => {
@@ -40,11 +40,22 @@ export function ChatInput({
         }
     }, [input]);
 
+    const handleClearContext = () => {
+        setActivePanel('none');
+    };
+
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
-            handleSubmit(e as any);
+            handleSubmit();
         }
+    };
+
+    const handleSubmit = (e?: React.FormEvent) => {
+        e?.preventDefault();
+        if (!input.trim() || disabled) return;
+        onSend(input);
+        setInput("");
     };
 
     return (
@@ -69,7 +80,7 @@ export function ChatInput({
                                 size="icon"
                                 variant="ghost"
                                 className="h-6 w-6 -mr-1 hover:bg-primary/20 text-primary"
-                                onClick={() => setSelectedProduct(null)}
+                                onClick={handleClearContext}
                             >
                                 <X className="w-3 h-3" />
                             </Button>
@@ -81,8 +92,8 @@ export function ChatInput({
                     {/* Input Container */}
                     <div className="flex-1 relative group">
                         <div className={cn(
-                            "flex items-end rounded-[1.5rem] bg-muted/40 backdrop-blur-md border border-white/10 shadow-sm transition-all duration-300",
-                            "focus-within:bg-background focus-within:ring-1 focus-within:ring-primary/20 focus-within:shadow-lg hover:bg-muted/60",
+                            "flex items-end rounded-[26px] bg-muted/40 backdrop-blur-xl border border-white/10 shadow-sm transition-all duration-300 ease-out",
+                            "focus-within:bg-background/80 focus-within:ring-1 focus-within:ring-primary/10 focus-within:shadow-md hover:bg-muted/50",
                             selectedProduct && "ring-1 ring-primary/30 bg-primary/5"
                         )}>
 
@@ -91,10 +102,10 @@ export function ChatInput({
                                 suppressHydrationWarning
                                 ref={textareaRef}
                                 value={input}
-                                onChange={handleInputChange}
+                                onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={handleKeyDown}
                                 placeholder={selectedProduct ? `Ask about ${selectedProduct.name}...` : placeholder}
-                                disabled={disabled || isLoading}
+                                disabled={disabled}
                                 rows={1}
                                 className={cn(
                                     "flex-1 bg-transparent resize-none py-3.5 px-5 text-base leading-relaxed font-medium",
@@ -111,7 +122,7 @@ export function ChatInput({
                                 variant="ghost"
                                 size="icon"
                                 className="flex-shrink-0 h-12 w-12 rounded-full text-muted-foreground hover:text-foreground hover:bg-transparent"
-                                disabled={disabled || isLoading}
+                                disabled={disabled}
                                 onClick={() => toast.info("Voice chat coming soon!")}
                             >
                                 <Mic className="w-5 h-5" />
@@ -135,8 +146,8 @@ export function ChatInput({
                                 selectedProduct ? "bg-primary hover:bg-primary/90" : "bg-primary hover:bg-primary/90",
                                 "text-primary-foreground"
                             )}
-                            onClick={(e) => handleSubmit(e as any)}
-                            disabled={!input.trim() || disabled || isLoading}
+                            onClick={handleSubmit}
+                            disabled={!input.trim() || disabled}
                         >
                             <Send className="w-5 h-5 ml-0.5" />
                         </Button>
